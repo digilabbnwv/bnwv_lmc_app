@@ -1,20 +1,32 @@
+import { lazy, Suspense } from 'react';
 import { NavLink, Route, Routes } from 'react-router';
 import { AuthPoort } from './auth/AuthPoort';
 import { useAuth } from './auth/AuthContext';
+import { rechtenVoor } from './auth/rechten';
 import { Doelbinding } from './components/Doelbinding';
-import { Accounts } from './pages/Accounts';
 import { Beveiliging } from './pages/Beveiliging';
+
+// Beheer en accounts worden pas geladen als iemand ze opent.
+const BeheerRoutes = lazy(() => import('./beheer/BeheerRoutes'));
+const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.Accounts })));
 
 function Navigatie() {
   const { rollen, uitloggen } = useAuth();
-  const magAccountsBeheren = rollen.includes('manager') || rollen.includes('beheerder');
+  const rechten = rechtenVoor(rollen);
   return (
     <nav aria-label="Hoofdmenu">
       <ul>
         <li>
-          <NavLink to="/">Start</NavLink>
+          <NavLink to="/" end>
+            Start
+          </NavLink>
         </li>
-        {magAccountsBeheren ? (
+        {rechten.beheer ? (
+          <li>
+            <NavLink to="/beheer">Beheer</NavLink>
+          </li>
+        ) : null}
+        {rechten.accounts ? (
           <li>
             <NavLink to="/accounts">Accounts</NavLink>
           </li>
@@ -40,17 +52,20 @@ function Navigatie() {
 
 function Inhoud() {
   const { rollen } = useAuth();
-  const magAccountsBeheren = rollen.includes('manager') || rollen.includes('beheerder');
+  const rechten = rechtenVoor(rollen);
   return (
     <>
       <Navigatie />
-      <Routes>
-        <Route path="/" element={<p>Welkom. De overzichten volgen in een volgende fase.</p>} />
-        <Route path="/beveiliging" element={<Beveiliging />} />
-        {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
-        {magAccountsBeheren ? <Route path="/accounts" element={<Accounts />} /> : null}
-        <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
-      </Routes>
+      <Suspense fallback={<p aria-busy="true">Bezig met laden…</p>}>
+        <Routes>
+          <Route path="/" element={<p>Welkom. De overzichten volgen in een volgende fase.</p>} />
+          <Route path="/beveiliging" element={<Beveiliging />} />
+          {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
+          {rechten.accounts ? <Route path="/accounts" element={<Accounts />} /> : null}
+          {rechten.beheer ? <Route path="/beheer/*" element={<BeheerRoutes />} /> : null}
+          <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

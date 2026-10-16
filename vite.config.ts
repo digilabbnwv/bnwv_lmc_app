@@ -27,7 +27,9 @@ export default defineConfig(({ command, mode }) => {
     // GitHub Pages serveert de site onder de reponaam.
     base: command === 'build' ? '/bnwv_lmc_app/' : '/',
     plugins: [react(), cspPlugin(env.VITE_SUPABASE_URL)],
-    build: { sourcemap: false },
+    // De hoofdbundel bevat React, supabase-js en zod (~600 kB, ~170 kB gzip); de beheerschermen
+    // worden apart geladen. Daarom ligt de waarschuwingsgrens iets hoger dan de standaard 500 kB.
+    build: { sourcemap: false, chunkSizeWarningLimit: 700 },
     test: {
       environment: 'jsdom',
       include: ['src/**/*.test.{ts,tsx}', '*.test.ts'],

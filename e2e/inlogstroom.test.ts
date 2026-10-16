@@ -269,6 +269,75 @@ Deno.test({
       assertEquals(data?.[0]?.gebruiker_id, managerId);
     });
 
+    await t.step(
+      'beheer: school, leerlingen en toewijzing tellen mee in de belasting',
+      async () => {
+        const sj = await manager.from('schooljaar').select('id').eq('naam', '2026-2027').single();
+        assertEquals(sj.error, null);
+        const schooljaarId = sj.data!.id as string;
+
+        const school = await manager.rpc('school_opslaan', {
+          p_werkpakket_id: null,
+          p_naam: 'E2E-school',
+          p_vestiging: 'HAR',
+          p_actief: true,
+          p_schooltype: 'PO',
+          p_adres: null,
+          p_postcode: '1234 AB',
+          p_plaats: 'Harderwijk',
+        });
+        assertEquals(school.error, null);
+        const schoolId = school.data as string;
+
+        // Seed: staffel PO 201–400 leerlingen = 50 uur, opslagfactor 2,0 → 100 uur.
+        assertEquals(
+          (await manager.from('school_schooljaar').insert({
+            school_id: schoolId,
+            schooljaar_id: schooljaarId,
+            aantal_leerlingen: 250,
+          })).error,
+          null,
+        );
+
+        const gepland = async () => {
+          const { data, error } = await manager
+            .rpc('belasting', { p_van: '2026-08-01', p_tot: '2027-07-31' })
+            .eq('medewerker_id', managerMw);
+          if (error) throw error;
+          return Number((data as { gepland: number }[])[0]?.gepland ?? 0);
+        };
+        const voor = await gepland();
+        assertEquals(
+          (await manager.from('toewijzing').insert({
+            medewerker_id: managerMw,
+            werkpakket_id: schoolId,
+            schooljaar_id: schooljaarId,
+            bron: 'staffel',
+            verdeling: 'schoolweken',
+          })).error,
+          null,
+        );
+        assertEquals(Math.round(((await gepland()) - voor) * 10000) / 10000, 100);
+      },
+    );
+
+    await t.step('beheer: configuratie kopiëren naar een nieuw schooljaar', async () => {
+      const bron = await manager.from('schooljaar').select('id').eq('naam', '2026-2027').single();
+      const nieuw = await manager
+        .from('schooljaar')
+        .insert({ naam: '2027-2028', startdatum: '2027-08-01', einddatum: '2028-07-31' })
+        .select('id')
+        .single();
+      assertEquals(nieuw.error, null);
+      const { data, error } = await manager.rpc('schooljaar_configuratie_kopieren', {
+        p_van_id: bron.data!.id,
+        p_naar_id: nieuw.data!.id,
+      });
+      assertEquals(error, null);
+      const r = data as { staffel: number; opslagfactor: number; schoolvakantie: number };
+      assert(r.staffel > 0 && r.opslagfactor > 0 && r.schoolvakantie > 0);
+    });
+
     await t.step('deactiveren trekt de toegang direct in', async () => {
       const kort = await inloggen(
         lotteEmail,

@@ -1041,6 +1041,27 @@ export type Database = {
       }
       mag_gebruikers_beheren: { Args: never; Returns: boolean }
       mijn_status: { Args: never; Returns: Json }
+      school_opslaan: {
+        Args: {
+          p_actief: boolean
+          p_adres: string
+          p_naam: string
+          p_plaats: string
+          p_postcode: string
+          p_schooltype: Database["public"]["Enums"]["schooltype"]
+          p_vestiging: Database["public"]["Enums"]["vestiging"]
+          p_werkpakket_id: string
+        }
+        Returns: string
+      }
+      schooljaar_configuratie_kopieren: {
+        Args: { p_naar_id: string; p_van_id: string }
+        Returns: Json
+      }
+      toewijzing_datums_vervangen: {
+        Args: { p_datums: string[]; p_toewijzing_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alias_bron: "matt" | "planning"
