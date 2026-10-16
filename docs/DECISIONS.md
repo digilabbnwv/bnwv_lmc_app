@@ -529,3 +529,8 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 - het te grote bestand (> 10 MB) maakt de test zelf aan.
 
 **Reden:** SPEC §8 ("genereer de negatieve varianten als aparte fixtures op basis van de geldige fixture"). Zo komt er geen 10 MB in de repository.
+
+### 2026-10-20 · Elke UPDATE en DELETE heeft een WHERE (safeupdate)
+
+**Keuze:** in migraties en functies heeft elke `UPDATE` en `DELETE` een `WHERE`, ook bij een tijdelijke tabel. Wie bewust alle rijen raakt, schrijft een betekenisvolle voorwaarde, zoals `where r.id is not null`.
+**Reden:** Supabase laadt voor aanvragen via de Data API de extensie `safeupdate`. Die weigert zo'n statement met foutcode 21000, ook binnen een SECURITY DEFINER-functie. pgTAP en PGlite laden deze extensie niet; de e2e-test via de echte API vond de fout wel.
