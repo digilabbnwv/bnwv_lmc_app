@@ -13,6 +13,7 @@ Volledige specificatie: `docs/SPEC.md`. Ontwerpkeuzes: `docs/DECISIONS.md`. Hand
 
 - **Repo is publiek.** Nooit committen: `service_role`-sleutel, wachtwoorden, tokens, `.env*`, echte namen van medewerkers, echte MATT-exports.
 - **Alleen synthetische testdata** (`fixtures/`). Werk alleen lokaal (`supabase start`) of tegen het testproject, nooit tegen productie.
+- Het enige Supabase-project is **BNWV - LMC APP** (`hgpgrqkurnulenqcighy`): tot het betaalde plan, de verwerkersovereenkomst en het akkoord van FG en OR **alleen fictieve gegevens** (zie DECISIONS.md, Omgeving). Andere projecten in de organisatie niet aanraken.
 - **`service_role` alleen in Edge Functions**, als secret.
 - **RLS aan op élke tabel**, "niets mag, tenzij". Nieuwe tabel ⇒ in dezelfde migratie RLS-policies én pgTAP-tests.
 - **Autorisatie in de database**, niet in de frontend. Rollen in een eigen tabel, nooit `user_metadata`.
