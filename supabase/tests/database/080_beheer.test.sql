@@ -197,5 +197,25 @@ select matches(
   '^fout:22023', 'Van en naar moeten verschillende schooljaren zijn'
 );
 
+-- ---------------------------------------------------------------------------
+-- E-mailadres van een medewerker met account blijft vast
+-- ---------------------------------------------------------------------------
+
+select matches(
+  tests.probeer('coordinator', $$update public.medewerker set email = 'ander@voorbeeld.test'
+    where id = tests.mw('lmc_b')$$),
+  '^fout:23514', 'E-mailadres van een medewerker met account kan niet worden gewijzigd'
+);
+select matches(
+  tests.probeer('coordinator', $$update public.medewerker set email = 'nieuw-adres@voorbeeld.test'
+    where email = 'kees.vandijk@voorbeeld.test'$$),
+  '^rijen:1$', 'E-mailadres van een medewerker zonder account kan wel worden gewijzigd'
+);
+select matches(
+  tests.probeer('coordinator', $$update public.medewerker set voornaam = 'Anders'
+    where id = tests.mw('lmc_b')$$),
+  '^rijen:1$', 'Andere gegevens van een medewerker met account kunnen wel worden gewijzigd'
+);
+
 select * from finish();
 rollback;

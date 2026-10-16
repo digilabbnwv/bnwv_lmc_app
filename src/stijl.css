@@ -180,3 +180,127 @@ fieldset.rollen label {
 .lijst {
   padding-left: 1.25rem;
 }
+
+/* Beheerschermen (fase 4) */
+.beheer {
+  margin-bottom: 2rem;
+}
+
+.beheer-balk,
+.filters,
+.knoppen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.beheer-formulier {
+  margin: 1rem 0;
+}
+
+.veld {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.veld-vinkje {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.veld-label {
+  font-weight: 600;
+}
+
+.veld-fout {
+  font-weight: 600;
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-width: 2px;
+  border-color: var(--tekst);
+}
+
+.melding-ok:empty {
+  display: none;
+}
+
+.tabel-schuif {
+  overflow-x: auto;
+}
+
+td.numeriek,
+th.numeriek {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+button.sorteer {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline dotted;
+}
+
+th[aria-sort='ascending'] button.sorteer::after {
+  content: ' ▲';
+}
+
+th[aria-sort='descending'] button.sorteer::after {
+  content: ' ▼';
+}
+
+button.gevaar {
+  border-style: dashed;
+}
+
+.tabbladen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--rand);
+  margin-bottom: 1rem;
+}
+
+.tab {
+  background: transparent;
+  color: var(--tekst);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+.tab.actief {
+  border-color: var(--rand);
+  font-weight: 700;
+}
+
+.datumlijst {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.datumlijst-rij {
+  display: flex;
+  gap: 0.5rem;
+}
+
+textarea {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rand);
+  border-radius: 0.375rem;
+}
+
+/* Tablet en kleiner: formulieren op volle breedte */
+@media (max-width: 48rem) {
+  form {
+    max-width: none;
+  }
+}

@@ -127,3 +127,27 @@ grant execute on function
   public.toewijzing_datums_vervangen(uuid, date[]),
   public.schooljaar_configuratie_kopieren(uuid, uuid)
 to authenticated, service_role;
+
+-- Het e-mailadres van een medewerker met account moet gelijk blijven aan het account
+-- (SPEC §7: account-e-mail = medewerker-e-mail). Wijzigen kan dan niet via beheer.
+create function private.medewerker_email_vast()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.email is distinct from old.email
+    and exists (select 1 from public.profiel p where p.medewerker_id = new.id) then
+    raise exception 'Het e-mailadres van een medewerker met account kan niet worden gewijzigd.'
+      using errcode = '23514';
+  end if;
+  return new;
+end
+$$;
+
+revoke execute on function private.medewerker_email_vast() from public, anon, authenticated;
+
+create trigger email_vast
+  before update of email on public.medewerker
+  for each row execute function private.medewerker_email_vast();

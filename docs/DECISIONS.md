@@ -400,3 +400,65 @@ Zonder geschikte dag komen de uren op de eerste dag, met `terugval = true`.
 
 **Keuze:** de pgTAP-tests vergelijken testcases A–D op 4 decimalen.
 **Reden:** de spec geeft de verwachte waarden zelf afgerond (bijvoorbeeld 155,2107). Er wordt gerekend in `numeric`; afronden gebeurt pas in de weergave.
+
+## Fase 4 — Beheerschermen
+
+### 2026-10-19 · Eén generiek beheerscherm
+
+**Keuze:** `src/beheer/BeheerScherm.tsx` levert overzicht, zoeken, sorteren en een formulierpaneel. Elke tabel is een korte definitie: kolommen, velden, een zod-schema en functies om op te slaan en te verwijderen. Er zijn geen nieuwe dependencies.
+**Reden:** het gaat om ongeveer twintig tabellen. Zo werkt elk scherm hetzelfde (toegankelijkheid, foutmeldingen, bevestigen bij verwijderen) en blijft de code klein.
+
+### 2026-10-19 · Validatie aan twee kanten, de database beslist
+
+**Keuze:** zod-schema's in de frontend weerspiegelen de constraints van de database. `vertaalFout()` maakt van databasefouten begrijpelijke meldingen; eigen Nederlandse meldingen uit triggers worden letterlijk getoond.
+**Reden:** SPEC §9 ("validatie aan client- én serverzijde"). De frontend voorkomt onnodige verzoeken; de database blijft de autoriteit.
+
+### 2026-10-19 · RPC's voor bewerkingen in één transactie
+
+**Keuze:** drie RPC's, alle drie `SECURITY INVOKER`, zodat RLS geldt:
+
+- `school_opslaan()`: werkpakket en school samen;
+- `toewijzing_datums_vervangen()`: de datumlijst in één keer;
+- `schooljaar_configuratie_kopieren()`.
+
+**Reden:** twee losse verzoeken kunnen halverwege mislukken en een half record achterlaten, zoals een school zonder schoolgegevens.
+
+### 2026-10-19 · Configuratie kopiëren uit een ander schooljaar
+
+**Keuze:** `schooljaar_configuratie_kopieren(van, naar)` neemt over:
+
+- de staffel;
+- de opslagfactoren, die weer "nog te bevestigen" worden;
+- de schoolvakanties, met de datums verschoven met het verschil in startdatum en afgekapt op het nieuwe schooljaar.
+
+Het doel-schooljaar moet leeg zijn. Toewijzingen worden niet gekopieerd.
+**Reden:** bevestigd door de eigenaar. Alleen vakantienamen kopiëren kan niet, want van en tot zijn verplicht. Daarom worden de datums verschoven en moeten ze daarna worden gecontroleerd. Toewijzingen kopiëren valt buiten deze versie (SPEC §11).
+
+### 2026-10-19 · E-mailadres vast bij een medewerker met account
+
+**Keuze:** de trigger `email_vast` weigert een wijziging van `medewerker.email` als er een profiel (account) bij hoort.
+**Reden:** het account-e-mailadres is gelijk aan dat van de medewerker (fase 2). Een wijziging alleen in de tabel `medewerker` zou die twee uit elkaar laten lopen.
+
+### 2026-10-19 · Beheerder ziet werk alleen in
+
+**Keuze:** scholen, activiteiten, projecten en toewijzingen zijn voor de beheerder alleen-lezen. MATT-projecten koppelen mag wel, omdat dat bij de import hoort.
+**Reden:** SPEC §6. De frontend verbergt de knoppen; RLS weigert schrijven ook als iemand de frontend omzeilt.
+
+### 2026-10-19 · Signalen bij toewijzingen
+
+**Keuze:** het overzicht toont neutraal:
+
+- "Aandelen van deze school samen …%" als de staffelaandelen niet samen 100% zijn;
+- "Geen geschikte dagen" bij een terugval.
+
+**Reden:** de database dwingt 100% niet af (fase 1). Het signaal helpt zonder te beoordelen.
+
+### 2026-10-19 · Beheer apart geladen; grens bundelwaarschuwing 700 kB
+
+**Keuze:** de beheerschermen en de accountpagina worden met `React.lazy` geladen. De grens voor de bundelwaarschuwing staat op 700 kB.
+**Reden:** de hoofdbundel bevat React, supabase-js en zod (ongeveer 600 kB, 170 kB gezipt). Verder opsplitsen levert voor de gebruikers weinig op.
+
+### 2026-10-19 · Geen browsertests
+
+**Keuze:** componenten en schema's worden getest met Vitest, data en rechten met pgTAP en de e2e-test. Er is geen Playwright.
+**Reden:** bevestigd door de eigenaar: minder dependencies en een snellere CI.
