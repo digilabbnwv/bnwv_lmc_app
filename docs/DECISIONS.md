@@ -98,6 +98,165 @@ Keuzes die niet in `SPEC.md` geregeld zijn. Nieuwste onderaan. Per keuze: datum,
 **Keuze:** boekingen op zaterdag of zondag worden bij de import geaccepteerd en tellen mee als gerealiseerd.
 **Reden:** de fixture bevat weekendboekingen, bijvoorbeeld op 18-1-2026. Capaciteit wordt per werkdag berekend, maar realisatie is wat er feitelijk geboekt is.
 
+## Fase 1 — Database en RLS
+
+### 2026-10-16 · Iedere gebruiker is een medewerker
+
+**Keuze:** ook manager en beheerder hebben een `medewerker`-record. Zonder gekoppelde, actieve medewerker is er geen toegang. Wie geen contract heeft in een schooljaar, verschijnt in dat jaar niet in het teamoverzicht (fase 6).
+**Reden:** SPEC §6 ("zonder gekoppelde medewerker ziet niets"); bevestigd door de eigenaar.
+
+### 2026-10-16 · Koppeling met de inlog alleen in `profiel`
+
+**Keuze:** `medewerker` krijgt geen kolom naar `auth.users`. De koppeling staat alleen in `profiel` (gebruiker 1-op-1 met medewerker, beide uniek).
+**Reden:** zo wordt dezelfde koppeling niet op twee plekken vastgelegd.
+
+### 2026-10-16 · Toegangsvoorwaarden in één functie
+
+**Keuze:** `private.heeft_toegang()` vereist al het volgende:
+
+- `aal2`;
+- een profiel met een actieve medewerker;
+- minstens één rol;
+- `moet_wachtwoord_wijzigen = false`.
+
+Alle policies bouwen hierop voort, via `heeft_rol()`, `heeft_een_rol()` en `eigen_medewerker_id()`.
+**Reden:** deactiveren of een rol afnemen trekt de toegang zo direct in, en "eerst wachtwoord wijzigen" wordt ook in de database afgedwongen. De frontend krijgt in fase 2 een aparte RPC om de eigen status op te vragen vóór er toegang is.
+
+### 2026-10-16 · Schema `private` en `private.beveilig_tabel()`
+
+**Keuze:** hulpfuncties staan in het schema `private`, dat niet via de Data API bereikbaar is. Elke tabel wordt ingericht met `private.beveilig_tabel()`:
+
+- RLS aan;
+- alle rechten van `anon` en `public` ingetrokken;
+- `select` (en eventueel insert, update en delete) voor `authenticated`;
+- de policies `lezen`, `toevoegen`, `wijzigen` en `verwijderen`;
+- de audit-trigger.
+
+**Reden:** één vast patroon voorkomt vergeten policies of rechten. De fundamenttest controleert het patroon bovendien voor álle tabellen.
+
+### 2026-10-16 · uuid als primaire sleutel
+
+**Keuze:** overal `uuid` (`gen_random_uuid()`), behalve `auditlog` (`bigint identity`, voor de volgorde).
+**Reden:** er lekken geen aantallen en ID's zijn niet te raden. RLS blijft de echte verdediging.
+
+### 2026-10-16 · Rollen toekennen zonder escalatie
+
+**Keuze:** niemand wijzigt de eigen rollen of het eigen profiel. Alleen een beheerder kent de rol `beheerder` toe of neemt hem af. Manager en beheerder kunnen `moet_wachtwoord_wijzigen` niet wijzigen (kolomrechten); dat doen alleen Edge Functions en triggers.
+**Reden:** anders kan een manager zichzelf beheerder maken en zo omschrijvingen van anderen lezen; bevestigd door de eigenaar.
+**Restrisico:** wie accounts aanmaakt (manager, beheerder), ziet het tijdelijke wachtwoord. In theorie kan die een account aan een andere medewerker koppelen en daarmee inloggen. Dit staat in het auditlog (profiel en gebruiker_rol) en is organisatorisch te beheersen.
+
+### 2026-10-16 · Leesrechten op referentiegegevens
+
+**Keuze:**
+
+- schooljaren, vakanties, feestdagen, staffel, opslagfactoren, instellingen, artikelmapping, werkpakketten, scholen, activiteittypes en MATT-projecten zijn leesbaar voor iedereen met toegang;
+- `medewerker_alias` is alleen leesbaar voor coordinator, manager en beheerder.
+
+**Reden:** de lmc heeft deze gegevens nodig om de eigen belasting te zien. Het zijn geen persoonsgegevens; schooladressen zijn zakelijk. Aliassen dienen alleen de import.
+
+### 2026-10-16 · MATT-projecten beheren ook door de beheerder
+
+**Keuze:** `matt_project` (koppelen en negeren) is te beheren door coordinator, manager en beheerder.
+**Reden:** de lijst "niet-gekoppelde MATT-projecten" hoort bij het importproces, en dat mogen deze drie rollen uitvoeren (SPEC §6).
+
+### 2026-10-16 · Boekingen alleen via RPC's
+
+**Keuze:** `matt_import`, `boeking` en `boeking_omschrijving` hebben geen insert-, update- of delete-policies. De import (fase 5) schrijft via `SECURITY DEFINER`-functies die de rol controleren, en draait onder de JWT van de gebruiker, zodat het auditlog weet wie het deed.
+**Reden:** concept, definitief maken en terugdraaien moeten transactioneel en volledig gecontroleerd verlopen.
+
+### 2026-10-16 · Omschrijvingen van anderen alleen via `boeking_details_van_ander()`
+
+**Keuze:** rechtstreeks leest iedere rol alleen de eigen omschrijvingen, ook coordinator en beheerder. Omschrijvingen van anderen lopen via de RPC `boeking_details_van_ander(medewerker, van, tot)`. Die:
+
+- is alleen voor coordinator en beheerder;
+- laat teruggedraaide imports weg;
+- schrijft elke opvraging in het auditlog, met aantal en periode maar zonder de omschrijvingen zelf.
+
+De manager ziet boekingen van anderen wel, maar zonder omschrijving.
+**Reden:** SPEC §6 ("loopt via een RPC-functie die het opvragen in het auditlog schrijft").
+
+### 2026-10-16 · Audit per import, niet per boeking
+
+**Keuze:** `boeking` en `boeking_omschrijving` hebben geen rij-audit. `matt_import` wel, en de RPC's in fase 5 loggen definitief maken en terugdraaien met aantallen.
+**Reden:** de manager mag het auditlog lezen, maar geen omschrijvingen van anderen. Een import van duizenden regels zou het log bovendien laten ontploffen. Bevestigd door de eigenaar.
+
+### 2026-10-16 · Auditlog drievoudig append-only
+
+**Keuze:**
+
+- er zijn geen update- of delete-policies;
+- `REVOKE` van insert, update, delete en truncate, ook voor `service_role`;
+- triggers weigeren update, delete en truncate, zelfs voor de eigenaar.
+
+Schrijven gebeurt alleen via `private.log_actie()`.
+**Reden:** SPEC §4 ("ook niet voor beheerders").
+
+### 2026-10-16 · Staffeluren verdelen met `aandeel_percentage`
+
+**Keuze:** `toewijzing.aandeel_percentage` (standaard 100, alleen bij bron `staffel`) geeft het deel van de staffeluren voor een medewerker, als meerdere LMC'ers op één school werken. De database dwingt niet af dat de som 100 is; de app toont een signaal.
+**Reden:** bevestigd door de eigenaar. Een harde controle zou het tijdelijk invoeren van toewijzingen onmogelijk maken.
+
+### 2026-10-16 · Afgeleide uren niet opslaan
+
+**Keuze:** bij bron `staffel` en `norm_x_aantal` blijven `gepland_*` leeg; de uren worden in fase 3 berekend. Bij `handmatig` zijn alle drie verplicht.
+**Reden:** de rekenregels staan op één plek (SPEC §5), en een wijziging in staffel of normuren werkt meteen door.
+
+### 2026-10-16 · Extra constraints
+
+**Keuze:**
+
+- **activiteit:** een werkpakket met soort `activiteit` heeft een `activiteittype_id`, andere soorten niet;
+- **school:** heeft een samengestelde foreign key (`werkpakket_id`, `soort`), zodat het werkpakket echt een school is;
+- **toewijzing:**
+  - één per (medewerker, werkpakket, schooljaar);
+  - een trigger controleert dat bron en soort bij elkaar passen en dat de looptijd binnen het schooljaar valt;
+- **datums bij `op_datum`:** staan in `toewijzing_datum` en liggen binnen het schooljaar;
+- **exclusion constraints:** geen overlap bij schooljaren, staffelbereiken, contracten (spec) en `niet_beschikbaar`;
+- **schoolvakanties:** liggen binnen hun schooljaar. Een zomervakantie over de jaargrens wordt in twee delen vastgelegd;
+- **instellingen:** alleen bekende sleutels, met een gecontroleerd formaat van de waarde;
+- **verwijderen:** een medewerker met toewijzingen of boekingen kan niet worden verwijderd (`RESTRICT`) en wordt gedeactiveerd.
+
+**Reden:** validatie aan de serverzijde (SPEC §9). Overlap bij `niet_beschikbaar` maakt het percentage op een dag dubbelzinnig.
+
+### 2026-10-16 · Seed
+
+**Keuze:**
+
+- **schooljaren en vakanties:** 2025-2026 en 2026-2027, met indicatieve schoolvakanties (nog te controleren);
+- **feestdagen:** voor 2026-2027 exact de testfeestdagen uit SPEC §5;
+- **rekenparameters:** een fictieve staffel en het domein `voorbeeld.test`;
+- **medewerkers:** de vijf namen uit de fixture, met MATT-aliassen;
+- **projecten:** 13 gekoppelde MATT-projecten;
+- **toewijzingen:** van elke bron één of meer.
+
+"Testpersoon Onbekend" en project 999 staan er bewust niet in. Er zijn geen auth-gebruikers of wachtwoorden.
+**Reden:** de import-tests (fase 5) hebben een niet-gematchte medewerker en een onbekend project nodig. Wachtwoorden horen niet in de repo.
+
+### 2026-10-16 · Teststrategie pgTAP
+
+**Keuze:**
+
+- **hulpfuncties:** `00000_helpers.test.sql` maakt het schema `tests` aan en wordt niet teruggedraaid, zodat de volgende testbestanden het kunnen gebruiken;
+- **rechtenmatrix:** `tests.matrix()` controleert per tabel lezen, toevoegen, wijzigen en verwijderen voor 12 persona's: lmc A en B, coordinator, manager, beheerder, lmc en manager op `aal1`, zonder rol, zonder medewerker, gedeactiveerd, moet wachtwoord wijzigen, en anon;
+- **expliciete tests:** daarnaast tests voor de eisen uit §6 en voor alle constraints.
+
+**Reden:** de tests geven §6 systematisch weer. Een nieuwe tabel krijgt met één aanroep een volledige matrix.
+
+### 2026-10-16 · Snelle lokale testopstelling zonder Docker
+
+**Keuze:** zolang Docker ontbreekt, test de ontwikkelaar lokaal met PGlite (Postgres in WASM), met nagebootste Supabase-rollen en `auth`-functies en een kleine pgTAP-vervanger. Dit staat buiten de repository. Het echte bewijs is `supabase test db` in CI.
+**Reden:** CI duurt minuten per poging. Mutatietests (bewust verzwakte policies) bevestigen dat de tests echt falen bij fouten.
+
 ## Bewaartermijn (ontwerp, nog niet geautomatiseerd)
 
-Dit wordt in fase 1 uitgewerkt volgens SPEC §10. Detailboekingen en omschrijvingen blijven het lopende en de twee voorgaande schooljaren bewaard. Daarna blijven alleen totalen per medewerker per schooljaar over. De uitvoering volgt in versie 2 via `pg_cron`.
+Volgens SPEC §10. De uitvoering volgt in versie 2 via `pg_cron`.
+
+- **Termijn:** detailboekingen (`boeking`) en omschrijvingen (`boeking_omschrijving`) blijven bewaard voor het lopende schooljaar en de twee voorgaande schooljaren.
+- **Daarna:** er blijven alleen totalen over per medewerker per schooljaar per categorie en per werkpakket (of "niet gekoppeld"). Ze komen in een nieuwe tabel `realisatie_totaal (medewerker_id, schooljaar_id, werkpakket_id null, categorie, uren)`, met dezelfde RLS als `boeking`.
+- **Jaarlijkse job**, bijvoorbeeld op 1 september, als één `SECURITY DEFINER`-functie in één transactie:
+  1. totalen berekenen voor de schooljaren die buiten de termijn vallen (alleen definitieve imports);
+  2. die totalen opslaan in `realisatie_totaal`;
+  3. de detailboekingen verwijderen (omschrijvingen gaan via cascade mee);
+  4. het aantal verwijderde rijen per schooljaar in het auditlog schrijven.
+- **Verwijderen:** teruggedraaide en concept-imports ouder dan de termijn worden volledig verwijderd.
+- **Auditlog:** krijgt een eigen bewaartermijn, nog vast te stellen met de FG. Dat vraagt een gecontroleerde uitzondering op de append-only-trigger, uitsluitend voor deze job.
