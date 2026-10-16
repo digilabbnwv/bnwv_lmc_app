@@ -1115,6 +1115,23 @@ export type Database = {
           vakantie: number
         }[]
       }
+      gepland_vs_gerealiseerd: {
+        Args: {
+          p_medewerker_id: string
+          p_peildatum?: string
+          p_schooljaar_id: string
+        }
+        Returns: {
+          categorie: Database["public"]["Enums"]["boeking_categorie"]
+          gepland: number
+          gepland_tot_peildatum: number
+          gerealiseerd: number
+          gerealiseerd_tot_peildatum: number
+          werkpakket_id: string
+          werkpakket_naam: string
+          werkpakket_soort: Database["public"]["Enums"]["werkpakket_soort"]
+        }[]
+      }
       mag_gebruikers_beheren: { Args: never; Returns: boolean }
       mag_matt_importeren: { Args: never; Returns: boolean }
       matt_import_concept_opslaan: {

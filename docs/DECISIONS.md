@@ -534,3 +534,39 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** in migraties en functies heeft elke `UPDATE` en `DELETE` een `WHERE`, ook bij een tijdelijke tabel. Wie bewust alle rijen raakt, schrijft een betekenisvolle voorwaarde, zoals `where r.id is not null`.
 **Reden:** Supabase laadt voor aanvragen via de Data API de extensie `safeupdate`. Die weigert zo'n statement met foutcode 21000, ook binnen een SECURITY DEFINER-functie. pgTAP en PGlite laden deze extensie niet; de e2e-test via de echte API vond de fout wel.
+
+## Fase 6 — Weergaven en deploy
+
+### 2026-10-21 · `gepland_vs_gerealiseerd()` in de database
+
+**Keuze:** één functie (SECURITY INVOKER) geeft per werkpakket en categorie het geplande en gerealiseerde aantal uren, zowel totaal als tot een peildatum (standaard vandaag). Voorbereiding en afronding tellen samen als `voorbereiding_afronding`. Een leeg werkpakket betekent: niet gekoppeld.
+**Reden:** SPEC §5 en §9. De rekenregels staan op één plek, RLS geldt, en met een peildatum is het te testen.
+
+### 2026-10-21 · Relatiebeheer: gepland 0
+
+**Keuze:** relatiebeheer staat in de vergelijking met gepland 0 en de toelichting "niet gepland".
+**Reden:** het rekenmodel (SPEC §5) kent geen geplande uren voor relatiebeheer, terwijl MATT ze wel boekt.
+
+### 2026-10-21 · Startpagina en teamoverzicht
+
+**Keuze:**
+
+- coordinator, manager en beheerder beginnen bij het teamoverzicht; een lmc bij "Mijn belasting";
+- het teamoverzicht toont alleen medewerkers met een contract in het schooljaar, standaard gesorteerd op resterende ruimte (aflopend).
+
+**Reden:** bevestigd door de eigenaar. Het teamoverzicht beantwoordt de vraag "wie heeft ruimte".
+
+### 2026-10-21 · Zone als woord met een grijze balk
+
+**Keuze:** de zone verschijnt steeds als woord, met een neutrale grijze balk; boven capaciteit krijgt een arcering. Er is geen rood, oranje of groen. Een test (`doelbinding.test.ts`) controleert dat de CSS geen rood, oranje of groen bevat en dat de teksten geen beoordelende woorden bevatten.
+**Reden:** SPEC §1 (doelbinding) en toegankelijkheid: de informatie zit nooit alleen in een kleur.
+
+### 2026-10-21 · CSP-controle in CI
+
+**Keuze:** na de build controleert CI dat `dist/index.html` de CSP-meta-tag met de juiste `connect-src` bevat, zonder `unsafe-inline` of `unsafe-eval` en zonder inline scripts.
+**Reden:** SPEC §2. Een regressie in de build wordt zo direct zichtbaar.
+
+### 2026-10-21 · Testproject inrichten via de CLI
+
+**Keuze:** de eigenaar logt zelf in (`supabase login`, `supabase link` met het databasewachtwoord). Claude voert daarna, na akkoord per stap, `db push --include-seed`, `functions deploy` en `secrets set` uit. De dashboardinstellingen doet de eigenaar. `supabase config push` wordt niet gebruikt.
+**Reden:** bevestigd door de eigenaar. Inloggegevens blijven bij de eigenaar. `config push` zou lokale waarden, zoals `site_url` op `127.0.0.1`, naar het testproject sturen.

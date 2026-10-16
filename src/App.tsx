@@ -5,6 +5,10 @@ import { useAuth } from './auth/AuthContext';
 import { rechtenVoor } from './auth/rechten';
 import { Doelbinding } from './components/Doelbinding';
 import { Beveiliging } from './pages/Beveiliging';
+import { GeplandGerealiseerd } from './weergaven/GeplandGerealiseerd';
+import { MijnBelasting } from './weergaven/MijnBelasting';
+import { OverDeApp } from './weergaven/OverDeApp';
+import { Teamoverzicht } from './weergaven/Teamoverzicht';
 
 // Beheer en accounts worden pas geladen als iemand ze opent.
 const BeheerRoutes = lazy(() => import('./beheer/BeheerRoutes'));
@@ -20,9 +24,15 @@ function Navigatie() {
     <nav aria-label="Hoofdmenu">
       <ul>
         <li>
-          <NavLink to="/" end>
-            Start
-          </NavLink>
+          <NavLink to="/mijn-belasting">Mijn belasting</NavLink>
+        </li>
+        {rechten.werkInzien ? (
+          <li>
+            <NavLink to="/team">Teamoverzicht</NavLink>
+          </li>
+        ) : null}
+        <li>
+          <NavLink to="/gepland-gerealiseerd">Gepland en gerealiseerd</NavLink>
         </li>
         {rechten.beheer ? (
           <li>
@@ -41,6 +51,9 @@ function Navigatie() {
         ) : null}
         <li>
           <NavLink to="/beveiliging">Beveiliging</NavLink>
+        </li>
+        <li>
+          <NavLink to="/over">Over deze app</NavLink>
         </li>
         <li>
           <button
@@ -66,7 +79,13 @@ function Inhoud() {
       <Navigatie />
       <Suspense fallback={<p aria-busy="true">Bezig met laden…</p>}>
         <Routes>
-          <Route path="/" element={<p>Welkom. De overzichten volgen in een volgende fase.</p>} />
+          {/* Startpagina: C/M/B het teamoverzicht, een lmc de eigen belasting. */}
+          <Route path="/" element={rechten.werkInzien ? <Teamoverzicht /> : <MijnBelasting />} />
+          <Route path="/mijn-belasting" element={<MijnBelasting />} />
+          {rechten.werkInzien ? <Route path="/team" element={<Teamoverzicht />} /> : null}
+          <Route path="/gepland-gerealiseerd" element={<GeplandGerealiseerd />} />
+          <Route path="/gepland-gerealiseerd/:medewerkerId" element={<GeplandGerealiseerd />} />
+          <Route path="/over" element={<OverDeApp />} />
           <Route path="/beveiliging" element={<Beveiliging />} />
           {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
           {rechten.accounts ? <Route path="/accounts" element={<Accounts />} /> : null}

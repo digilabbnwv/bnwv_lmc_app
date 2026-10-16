@@ -33,6 +33,13 @@ jobs:
         run: npm run build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
+      - name: CSP in de build controleren
+        run: |
+          grep -q 'http-equiv="Content-Security-Policy"' dist/index.html
+          grep -q 'connect-src http://127.0.0.1:54321' dist/index.html
+          if grep -Eq 'unsafe-inline|unsafe-eval' dist/index.html; then echo "::error::CSP bevat unsafe-inline of unsafe-eval"; exit 1; fi
+          # Geen inline scripts: elk <script> moet een src hebben.
+          if grep -Pq '<script(?![^>]*\bsrc=)[^>]*>' dist/index.html; then echo "::error::Inline script in index.html"; exit 1; fi
 
   database:
     runs-on: ubuntu-latest
