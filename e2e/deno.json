@@ -12,7 +12,7 @@
     "singleQuote": true
   },
   "tasks": {
-    "test": "deno test --allow-net --allow-env",
+    "test": "deno test --allow-net --allow-env --allow-read=../fixtures",
     "check": "deno fmt --check && deno lint && deno check ."
   }
 }

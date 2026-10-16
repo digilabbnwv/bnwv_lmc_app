@@ -8,6 +8,9 @@ import { Beveiliging } from './pages/Beveiliging';
 
 // Beheer en accounts worden pas geladen als iemand ze opent.
 const BeheerRoutes = lazy(() => import('./beheer/BeheerRoutes'));
+const MattImport = lazy(() =>
+  import('./import/MattImport').then((m) => ({ default: m.MattImport })),
+);
 const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.Accounts })));
 
 function Navigatie() {
@@ -24,6 +27,11 @@ function Navigatie() {
         {rechten.beheer ? (
           <li>
             <NavLink to="/beheer">Beheer</NavLink>
+          </li>
+        ) : null}
+        {rechten.importeren ? (
+          <li>
+            <NavLink to="/import">MATT-import</NavLink>
           </li>
         ) : null}
         {rechten.accounts ? (
@@ -63,6 +71,7 @@ function Inhoud() {
           {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
           {rechten.accounts ? <Route path="/accounts" element={<Accounts />} /> : null}
           {rechten.beheer ? <Route path="/beheer/*" element={<BeheerRoutes />} /> : null}
+          {rechten.importeren ? <Route path="/import" element={<MattImport />} /> : null}
           <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
         </Routes>
       </Suspense>

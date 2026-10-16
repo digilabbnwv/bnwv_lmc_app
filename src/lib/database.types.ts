@@ -170,6 +170,13 @@ export type Database = {
             referencedRelation: "boeking"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "boeking_omschrijving_boeking_id_fkey"
+            columns: ["boeking_id"]
+            isOneToOne: true
+            referencedRelation: "gerealiseerd"
+            referencedColumns: ["boeking_id"]
+          },
         ]
       }
       contract: {
@@ -311,6 +318,38 @@ export type Database = {
           uitgevoerd_door?: string | null
         }
         Relationships: []
+      }
+      matt_import_niet_gematcht: {
+        Row: {
+          aantal: number
+          id: string
+          import_id: string
+          naam: string
+          uren: number
+        }
+        Insert: {
+          aantal: number
+          id?: string
+          import_id: string
+          naam: string
+          uren: number
+        }
+        Update: {
+          aantal?: number
+          id?: string
+          import_id?: string
+          naam?: string
+          uren?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matt_import_niet_gematcht_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "matt_import"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matt_project: {
         Row: {
@@ -888,6 +927,43 @@ export type Database = {
         }
         Relationships: []
       }
+      gerealiseerd: {
+        Row: {
+          artikelcode: string | null
+          boeking_id: string | null
+          categorie: Database["public"]["Enums"]["boeking_categorie"] | null
+          datum: string | null
+          matt_project_id: string | null
+          medewerker_id: string | null
+          projectnummer: string | null
+          uren: number | null
+          uren_open: number | null
+          werkpakket_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boeking_matt_project_id_fkey"
+            columns: ["matt_project_id"]
+            isOneToOne: false
+            referencedRelation: "matt_project"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boeking_medewerker_id_fkey"
+            columns: ["medewerker_id"]
+            isOneToOne: false
+            referencedRelation: "medewerker"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matt_project_werkpakket_id_fkey"
+            columns: ["werkpakket_id"]
+            isOneToOne: false
+            referencedRelation: "werkpakket"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       toewijzing_dag: {
         Row: {
           afronding: number | null
@@ -1040,6 +1116,20 @@ export type Database = {
         }[]
       }
       mag_gebruikers_beheren: { Args: never; Returns: boolean }
+      mag_matt_importeren: { Args: never; Returns: boolean }
+      matt_import_concept_opslaan: {
+        Args: { p_periode_tot: string; p_periode_van: string; p_regels: Json }
+        Returns: Json
+      }
+      matt_import_definitief_maken: {
+        Args: { p_import_id: string }
+        Returns: Json
+      }
+      matt_import_terugdraaien: { Args: { p_import_id: string }; Returns: Json }
+      matt_import_verwerpen: {
+        Args: { p_import_id: string }
+        Returns: undefined
+      }
       mijn_status: { Args: never; Returns: Json }
       school_opslaan: {
         Args: {

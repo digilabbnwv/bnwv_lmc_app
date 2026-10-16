@@ -69,7 +69,7 @@ Repository: `bnwv_lmc_app` (publiek).
 - [ ] Functies uitrollen naar het **testproject**:
 
   ```bash
-  supabase functions deploy gebruiker-aanmaken account-resetten --project-ref <test-project-ref>
+  supabase functions deploy gebruiker-aanmaken account-resetten matt-import --project-ref <test-project-ref>
   ```
 
 ### Eerste beheerder (eenmalig per project)

@@ -18,7 +18,8 @@ function corsHeaders(req: Request, origins: Set<string>): Record<string, string>
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type, x-periode-van, x-periode-tot',
     'Access-Control-Max-Age': '600',
     Vary: 'Origin',
   };
