@@ -4,8 +4,8 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  // Edge Functions draaien op Deno en worden met `deno lint` gecontroleerd.
-  { ignores: ['dist', 'coverage', 'supabase/functions'] },
+  // Edge Functions en de e2e-test draaien op Deno en worden met `deno lint` gecontroleerd.
+  { ignores: ['dist', 'coverage', 'supabase/functions', 'e2e'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],
