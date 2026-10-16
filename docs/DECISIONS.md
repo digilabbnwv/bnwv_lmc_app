@@ -344,3 +344,59 @@ Pas daarna gebruiken de functies de admin-API (`service_role`), alleen voor wat 
 
 **Keuze:** migratie `20261017000008` kent `service_role` select, insert, update en delete toe op alle tabellen in `public`; op het auditlog alleen select. `beveilig_tabel()` doet dat voortaan voor elke nieuwe tabel, en de fundamenttest controleert het.
 **Reden:** nieuwere Supabase-versies kennen nieuwe tabellen niet meer automatisch toe aan `service_role` (gevonden via de e2e-test). Edge Functions hebben die rechten nodig. `service_role` bestaat alleen als secret in Edge Functions (SPEC §1).
+
+## Fase 3 — Rekenmodel
+
+### 2026-10-18 · Alles per werkdag, optellen in de weergave
+
+**Keuze:** `public.capaciteit_per_dag()` en de view `public.toewijzing_dag` rekenen per werkdag (ma–vr). `belasting()`, `belasting_schooljaar` en `belasting_per_periode()` (week of maand) tellen die dagwaarden op. Alle objecten zijn `SECURITY INVOKER`, en views hebben `security_invoker = true`.
+**Reden:** SPEC §5. De rekenregels staan op één plek en vallen onder RLS: een lmc ziet alleen de eigen cijfers, en op `aal1` is er niets.
+
+### 2026-10-18 · Vakantie-uren gelijk over de werkdagen van het kalenderjaar
+
+**Keuze:** per werkdag geldt vakantie = uren van het kalenderjaar ÷ het aantal werkdagen (ma–vr) in dat kalenderjaar. Feestdagen tellen in de noemer mee, want 2026 heeft 261 werkdagen (testcase A).
+**Reden:** de som over een schooljaar is precies de formule uit SPEC §5. Dezelfde regel werkt ook voor een week of een maand. Op dagen zonder contract kan netto negatief zijn; alleen de som is betekenisvol.
+
+### 2026-10-18 · Overhead per dag; signaalgrenzen op de eerste dag van de periode
+
+**Keuze:** `inzetbaar` rekent elke dag met het `overhead_percentage` dat op die dag geldt. Voor de zone van een periode gelden `grens_vol` en `grens_boven_capaciteit` van de eerste dag van die periode.
+**Reden:** bevestigd door de eigenaar ("per dag"). Een zone heeft voor een hele periode één grens nodig.
+
+### 2026-10-18 · Zones
+
+**Keuze:**
+
+- ruimte: < `grens_vol`;
+- vol: `grens_vol` t/m `grens_boven_capaciteit`, dus 100% is vol;
+- boven_capaciteit: daarboven.
+
+Zonder inzetbare uren (≤ 0) zijn belastingsgraad en zone leeg.
+**Reden:** bevestigd door de eigenaar. Een deling door nul of door negatieve uren heeft geen betekenis.
+
+### 2026-10-18 · Verdeling over de dagen
+
+**Keuze:**
+
+- **`schoolweken`:** werkdagen van het schooljaar, zonder feestdagen en zonder schoolvakanties;
+- **`looptijd`:** werkdagen van van t/m tot, zonder feestdagen; schoolvakanties tellen mee;
+- **`op_datum`:** de opgegeven datums, elk een gelijk deel.
+
+Zonder geschikte dag komen de uren op de eerste dag, met `terugval = true`.
+**Reden:** looptijd is bevestigd door de eigenaar; projecten zoals de Kinderboekenweek kunnen ook in vakanties werk geven. De terugval voorkomt dat uren verdwijnen; de UI kan zulke toewijzingen tonen.
+
+### 2026-10-18 · Staffel en opslag
+
+**Keuze:**
+
+- staffeluren = `uren_handmatig`, of anders de staffel bij het aantal leerlingen, × `aandeel_percentage`;
+- uitvoering = staffeluren;
+- voorbereiding = staffeluren × (opslagfactor − 1);
+- ontbreekt een opslagfactor, dan is de factor 1 (geen opslag);
+- ontbreekt een staffel, dan zijn er 0 uren.
+
+**Reden:** SPEC §5 ("de opslag telt als voorbereiding_afronding, de staffeluren als uitvoering"). Ontbrekende configuratie geeft zo geen fout, maar zichtbaar 0.
+
+### 2026-10-18 · Testcases op 4 decimalen
+
+**Keuze:** de pgTAP-tests vergelijken testcases A–D op 4 decimalen.
+**Reden:** de spec geeft de verwachte waarden zelf afgerond (bijvoorbeeld 155,2107). Er wordt gerekend in `numeric`; afronden gebeurt pas in de weergave.
