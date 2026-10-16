@@ -93,11 +93,11 @@ Accounts maak je via de app aan, maar daarvoor is al een manager of beheerder no
 - [ ] **Authentication → Emails → Reset password**: vervang de tekst door "Wachtwoordherstel per e-mail is uitgeschakeld. Neem contact op met een beheerder." **zonder** link.
 - [ ] **Authentication → Emails → Magic link**: idem (er is geen inlog per e-maillink).
 
-## 4. Testproject in gebruik nemen (fase 6)
+## 4. Project in gebruik nemen met fictieve gegevens (fase 6)
 
-Alleen met **fictieve** gegevens (de seed). Volg de stappen in deze volgorde. Bij stappen met **(eigenaar)** voer je zelf iets in (inloggen, wachtwoord); de andere stappen kan Claude via de CLI uitvoeren, na akkoord per stap.
+Er is één project: **BNWV - LMC APP** (ref `hgpgrqkurnulenqcighy`). Het bevat tot ingebruikname (§5) **alleen fictieve** gegevens: de seed en de synthetische fixture. Volg de stappen in deze volgorde. Bij stappen met **(eigenaar)** voer je zelf iets in (inloggen, wachtwoord); de andere stappen kan Claude via de CLI uitvoeren, na akkoord per stap.
 
-1. **(eigenaar)** Supabase-testproject `bnwv-lmc-test` aanmaken in een EU-regio. Noteer de _project ref_ en bewaar het databasewachtwoord in de wachtwoordkluis.
+1. **(eigenaar)** Bewaar het databasewachtwoord van het project in de wachtwoordkluis.
 2. **(eigenaar)** In een terminal in de projectmap:
 
    ```bash
@@ -105,7 +105,7 @@ Alleen met **fictieve** gegevens (de seed). Volg de stappen in deze volgorde. Bi
    ```
 
    ```bash
-   supabase link --project-ref <test-project-ref>
+   supabase link --project-ref hgpgrqkurnulenqcighy
    ```
 
 3. Migraties en de fictieve seed naar het testproject:
@@ -127,7 +127,7 @@ Alleen met **fictieve** gegevens (de seed). Volg de stappen in deze volgorde. Bi
 5. **(eigenaar)** Dashboard: de auth-instellingen en e-mailsjablonen uit §3. Site URL en Redirect URL: `https://digilabbnwv.github.io/bnwv_lmc_app/`.
 6. **(eigenaar)** Eerste beheerder volgens §3, met een **fictieve** medewerker uit de seed (bijv. `sanne.devries@voorbeeld.test`; het domein `voorbeeld.test` is het toegestane domein in de seed).
 7. **(eigenaar)** GitHub → Settings → Secrets and variables → Actions → _Variables_:
-   - `VITE_SUPABASE_URL` = `https://<test-project-ref>.supabase.co`
+   - `VITE_SUPABASE_URL` = `https://hgpgrqkurnulenqcighy.supabase.co`
    - `VITE_SUPABASE_ANON_KEY` = de _anon_ / _publishable_ key (publiek; nooit de `service_role`-sleutel)
    - `PAGES_DEPLOY_ENABLED` = `true`
 
@@ -138,5 +138,7 @@ Alleen met **fictieve** gegevens (de seed). Volg de stappen in deze volgorde. Bi
 10. **Tablets met MDM (JAMF):** controleer bij IT dat JavaScript is toegestaan voor `digilabbnwv.github.io` op de iPads die LMC'ers gebruiken. Bij een eerdere webuitrol stond JavaScript op kiosk-iPads uit; zonder JavaScript werkt de app niet.
 
 ## 5. Voor ingebruikname met echte gegevens (buiten deze opdracht)
+
+**Opruimen vóór echte gegevens:** verwijder alle fictieve gegevens (seed, testaccounts, imports van de fixture) of maak een nieuw, leeg project en voer daar alleen de migraties uit (`supabase db push` zónder `--include-seed`). Verwijder ook de fictieve auth-gebruikers.
 
 Betaald Supabase-plan met back-ups, een verwerkersovereenkomst, akkoord van de FG en akkoord van de ondernemingsraad.

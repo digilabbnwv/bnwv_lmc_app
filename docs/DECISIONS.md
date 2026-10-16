@@ -570,3 +570,10 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** de eigenaar logt zelf in (`supabase login`, `supabase link` met het databasewachtwoord). Claude voert daarna, na akkoord per stap, `db push --include-seed`, `functions deploy` en `secrets set` uit. De dashboardinstellingen doet de eigenaar. `supabase config push` wordt niet gebruikt.
 **Reden:** bevestigd door de eigenaar. Inloggegevens blijven bij de eigenaar. `config push` zou lokale waarden, zoals `site_url` op `127.0.0.1`, naar het testproject sturen.
+
+## Omgeving
+
+### 2026-10-21 · Eén Supabase-project, voorlopig alleen fictieve gegevens
+
+**Keuze:** er is geen apart testproject. Het project **BNWV - LMC APP** (ref `hgpgrqkurnulenqcighy`, eu-west-1) is voorlopig de enige omgeving en bevat **uitsluitend fictieve gegevens**: de seed en de synthetische MATT-fixture. Er komen geen echte medewerkers en geen echte MATT-exports in, tot aan alle voorwaarden voor ingebruikname is voldaan: een betaald plan met back-ups, een verwerkersovereenkomst, akkoord van de FG en akkoord van de OR. Daarvóór wordt de database opgeschoond (zie SETUP.md §5).
+**Reden:** besloten door de eigenaar. Het gratis plan staat geen extra actief project toe. Het doel van SPEC §1 ("werk alleen lokaal of tegen het testproject") blijft zo gewaarborgd: zolang dit project alleen fictieve gegevens bevat, fungeert het als testomgeving.
