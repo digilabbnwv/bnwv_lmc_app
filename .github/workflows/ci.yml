@@ -83,7 +83,7 @@ jobs:
           if ! diff -q src/lib/database.types.ts /tmp/database.types.ts > /dev/null; then
             # Annotaties zijn max. 4096 tekens: gecomprimeerd (gzip + base64) in delen.
             # Herstellen: delen achter elkaar, base64 -d | gunzip > src/lib/database.types.ts
-            gzip -9 -c /tmp/database.types.ts | base64 -w0 | fold -w 4000 > /tmp/delen.txt
+            { gzip -9 -c /tmp/database.types.ts | base64 -w0 | fold -w 4000; echo; } > /tmp/delen.txt
             totaal=$(wc -l < /tmp/delen.txt)
             n=0
             while IFS= read -r deel; do
