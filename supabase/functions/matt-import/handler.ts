@@ -65,6 +65,9 @@ export async function verwerk(
     });
   } catch (e) {
     if (e instanceof ImportFout) return fout(req, origins, e.status, e.message);
-    return fout(req, origins, 500, 'De import kon niet worden verwerkt.');
+    // Alleen de technische foutcode (bijv. een Postgres-SQLSTATE) meegeven, geen inhoud.
+    const code = e && typeof e === 'object' && 'code' in e ? String(e.code) : 'onbekend';
+    console.error('matt-import mislukt', code);
+    return fout(req, origins, 500, `De import kon niet worden verwerkt (foutcode ${code}).`);
   }
 }
