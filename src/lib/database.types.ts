@@ -459,6 +459,13 @@ export type Database = {
             foreignKeyName: "opslagfactor_schooljaar_id_fkey"
             columns: ["schooljaar_id"]
             isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "opslagfactor_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
             referencedRelation: "schooljaar"
             referencedColumns: ["id"]
           },
@@ -562,6 +569,13 @@ export type Database = {
             foreignKeyName: "school_schooljaar_schooljaar_id_fkey"
             columns: ["schooljaar_id"]
             isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "school_schooljaar_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
             referencedRelation: "schooljaar"
             referencedColumns: ["id"]
           },
@@ -615,6 +629,13 @@ export type Database = {
             foreignKeyName: "schoolvakantie_schooljaar_id_fkey"
             columns: ["schooljaar_id"]
             isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "schoolvakantie_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
             referencedRelation: "schooljaar"
             referencedColumns: ["id"]
           },
@@ -646,6 +667,13 @@ export type Database = {
           uren?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "staffel_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
           {
             foreignKeyName: "staffel_schooljaar_id_fkey"
             columns: ["schooljaar_id"]
@@ -716,6 +744,13 @@ export type Database = {
             foreignKeyName: "toewijzing_schooljaar_id_fkey"
             columns: ["schooljaar_id"]
             isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "toewijzing_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
             referencedRelation: "schooljaar"
             referencedColumns: ["id"]
           },
@@ -751,6 +786,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "toewijzing"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toewijzing_datum_toewijzing_id_fkey"
+            columns: ["toewijzing_id"]
+            isOneToOne: false
+            referencedRelation: "toewijzing_dag"
+            referencedColumns: ["toewijzing_id"]
+          },
+          {
+            foreignKeyName: "toewijzing_datum_toewijzing_id_fkey"
+            columns: ["toewijzing_id"]
+            isOneToOne: false
+            referencedRelation: "toewijzing_uren"
+            referencedColumns: ["toewijzing_id"]
           },
         ]
       }
@@ -820,12 +869,148 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      belasting_schooljaar: {
+        Row: {
+          belastingsgraad: number | null
+          bruto: number | null
+          contracturen_per_week: number | null
+          gepland: number | null
+          gepland_uitvoering: number | null
+          gepland_voorbereiding_afronding: number | null
+          inzetbaar: number | null
+          medewerker_id: string | null
+          netto: number | null
+          ruimte: number | null
+          schooljaar: string | null
+          schooljaar_id: string | null
+          vakantie: number | null
+          zone: string | null
+        }
+        Relationships: []
+      }
+      toewijzing_dag: {
+        Row: {
+          afronding: number | null
+          datum: string | null
+          medewerker_id: string | null
+          schooljaar_id: string | null
+          terugval: boolean | null
+          toewijzing_id: string | null
+          totaal: number | null
+          uitvoering: number | null
+          voorbereiding: number | null
+          werkpakket_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toewijzing_medewerker_id_fkey"
+            columns: ["medewerker_id"]
+            isOneToOne: false
+            referencedRelation: "medewerker"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toewijzing_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "toewijzing_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
+            referencedRelation: "schooljaar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toewijzing_werkpakket_id_fkey"
+            columns: ["werkpakket_id"]
+            isOneToOne: false
+            referencedRelation: "werkpakket"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      toewijzing_uren: {
+        Row: {
+          afronding: number | null
+          bron: Database["public"]["Enums"]["uren_bron"] | null
+          medewerker_id: string | null
+          schooljaar_id: string | null
+          toewijzing_id: string | null
+          totaal: number | null
+          uitvoering: number | null
+          verdeling: Database["public"]["Enums"]["verdeling"] | null
+          voorbereiding: number | null
+          werkpakket_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toewijzing_medewerker_id_fkey"
+            columns: ["medewerker_id"]
+            isOneToOne: false
+            referencedRelation: "medewerker"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toewijzing_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
+            referencedRelation: "belasting_schooljaar"
+            referencedColumns: ["schooljaar_id"]
+          },
+          {
+            foreignKeyName: "toewijzing_schooljaar_id_fkey"
+            columns: ["schooljaar_id"]
+            isOneToOne: false
+            referencedRelation: "schooljaar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toewijzing_werkpakket_id_fkey"
+            columns: ["werkpakket_id"]
+            isOneToOne: false
+            referencedRelation: "werkpakket"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       account_reset_voorbereiden: {
         Args: { p_gebruiker_id: string }
         Returns: undefined
+      }
+      belasting: {
+        Args: { p_tot: string; p_van: string }
+        Returns: {
+          belastingsgraad: number
+          bruto: number
+          contracturen_per_week: number
+          gepland: number
+          gepland_uitvoering: number
+          gepland_voorbereiding_afronding: number
+          inzetbaar: number
+          medewerker_id: string
+          netto: number
+          ruimte: number
+          vakantie: number
+          zone: string
+        }[]
+      }
+      belasting_per_periode: {
+        Args: { p_eenheid: string; p_schooljaar_id: string }
+        Returns: {
+          belastingsgraad: number
+          gepland: number
+          inzetbaar: number
+          medewerker_id: string
+          periode_tot: string
+          periode_van: string
+          ruimte: number
+          zone: string
+        }[]
       }
       boeking_details_van_ander: {
         Args: { p_medewerker_id: string; p_tot: string; p_van: string }
@@ -838,6 +1023,20 @@ export type Database = {
           omschrijving: string
           uren: number
           uren_open: number
+        }[]
+      }
+      capaciteit_per_dag: {
+        Args: { p_medewerker_id: string; p_tot: string; p_van: string }
+        Returns: {
+          beschikbaarheid: number
+          bruto: number
+          contracturen_dag: number
+          datum: string
+          feestdag: boolean
+          inzetbaar: number
+          netto: number
+          overhead_percentage: number
+          vakantie: number
         }[]
       }
       mag_gebruikers_beheren: { Args: never; Returns: boolean }
