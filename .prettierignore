@@ -6,3 +6,4 @@ fixtures
 supabase/functions
 supabase/.temp
 docs/SPEC.md
+e2e

@@ -1,9 +1,10 @@
 name: CI
 
+# Elke push op elke branch (ook die van Dependabot). De checks gelden per commit,
+# dus ook voor de PR met die commit.
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: ['**']
 
 permissions:
   contents: read
@@ -59,6 +60,47 @@ jobs:
           bericht=$(printf '%s' "$regels" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
           echo "::error title=pgTAP-uitvoer::$bericht"
 
+  # Volledige lokale stack (Postgres, Auth, PostgREST, Edge Functions): controleert de
+  # gegenereerde databasetypes en draait de end-to-end-test van de inlogstroom.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.115.0
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+      - name: Lokale stack starten
+        run: supabase start -x studio,imgproxy,storage-api,realtime,logflare,vector,supavisor
+      - name: Databasetypes controleren
+        run: |
+          supabase gen types typescript --local > /tmp/database.types.ts
+          if ! diff -q src/lib/database.types.ts /tmp/database.types.ts > /dev/null; then
+            inhoud=$(sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' /tmp/database.types.ts)
+            echo "::error title=database.types.ts is verouderd::$inhoud"
+            exit 1
+          fi
+      - name: End-to-end-test inlogstroom
+        working-directory: e2e
+        run: |
+          eval "$(supabase status -o env)"
+          export SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          set -o pipefail
+          deno task test 2>&1 | tee e2e.log
+      - name: Mislukte e2e-stappen als annotatie
+        if: failure()
+        working-directory: e2e
+        run: |
+          [ -f e2e.log ] || exit 0
+          regels=$(grep -E 'FAILED|error|Error|=>|assert' e2e.log | head -n 60 || true)
+          bericht=$(printf '%s' "$regels" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=e2e-uitvoer::$bericht"
+
   edge-functions:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -74,3 +116,6 @@ jobs:
           deno-version: v2.x
       - name: fmt, lint, typecheck en tests
         run: deno task check --frozen
+      - name: e2e-test controleren (fmt, lint, typecheck, TOTP-unittest)
+        working-directory: e2e
+        run: deno task check --frozen && deno test --frozen totp.test.ts

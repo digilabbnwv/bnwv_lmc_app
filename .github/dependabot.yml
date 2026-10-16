@@ -7,6 +7,13 @@ updates:
     groups:
       ontwikkeltools:
         dependency-type: development
+    ignore:
+      # typescript-eslint ondersteunt TypeScript 7 nog niet (zie docs/DECISIONS.md).
+      - dependency-name: typescript
+        versions: ['>=7']
+      # Typen volgen de Node-versie uit .nvmrc (24).
+      - dependency-name: '@types/node'
+        versions: ['>=25']
   - package-ecosystem: github-actions
     directory: /
     schedule:

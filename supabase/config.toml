@@ -384,8 +384,17 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# BNWV: geen geheim; origins van de lokale Vite-dev-server en -preview.
+# Test- en productieproject: zie docs/SETUP.md.
+[edge_runtime.secrets]
+TOEGESTANE_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173"
+
+# BNWV: Edge Functions (SPEC §7). Supabase controleert de JWT al vóór de functie.
+[functions.gebruiker-aanmaken]
+verify_jwt = true
+
+[functions.account-resetten]
+verify_jwt = true
 
 [analytics]
 enabled = true
