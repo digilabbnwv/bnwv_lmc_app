@@ -34,6 +34,7 @@ Volledige specificatie: `docs/SPEC.md`. Ontwerpkeuzes: `docs/DECISIONS.md`. Hand
 - Geen gevoelige gegevens in URL's/querystrings. `localStorage` alleen voor de Supabase-sessie.
 - Taal: UI, commentaar, tabel- en kolomnamen in het Nederlands; snake_case zonder diakrieten.
 - Rekenen in `numeric`, pas afronden in de weergave (1 decimaal).
+- Elke `UPDATE`/`DELETE` heeft een `WHERE` (Supabase laadt `safeupdate` voor API-aanvragen).
 
 ## Commando's
 

@@ -148,7 +148,9 @@ begin
       where a.bron = 'matt' and a.alias_genormaliseerd = r.genormaliseerd
     ),
     matt_project_id = (select p.id from public.matt_project p where p.projectnummer = r.projectnummer),
-    categorie = (select m.categorie from public.matt_artikel_mapping m where m.artikelcode = r.artikelcode);
+    categorie = (select m.categorie from public.matt_artikel_mapping m where m.artikelcode = r.artikelcode)
+  -- Supabase (safeupdate) weigert een UPDATE zonder WHERE, ook binnen een functie.
+  where r.id is not null;
 
   insert into public.matt_import (uitgevoerd_door, periode_van, periode_tot, status)
   values (auth.uid(), p_periode_van, p_periode_tot, 'concept')

@@ -4,6 +4,7 @@
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { totp } from './totp.ts';
+import { parseMatt } from '../supabase/functions/matt-import/parser.ts';
 
 const URL = Deno.env.get('SUPABASE_URL');
 const ANON = Deno.env.get('SUPABASE_ANON_KEY');
@@ -387,7 +388,18 @@ Deno.test({
     let importId = '';
     await t.step('MATT-import: voorvertoning van de synthetische fixture', async () => {
       const { status, data } = await importeer(manager, fixture, '2026-01-01', '2026-03-31');
-      assertEquals(status, 200, JSON.stringify(data));
+      if (status !== 200) {
+        // Diagnose: dezelfde RPC rechtstreeks, zodat de volledige Postgres-melding zichtbaar is.
+        const regels = parseMatt(fixture).regels.map(({ verwerkt: _v, nacalc: _n, ...r }) => r);
+        const direct = await manager.rpc('matt_import_concept_opslaan', {
+          p_periode_van: '2026-01-01',
+          p_periode_tot: '2026-03-31',
+          p_regels: regels,
+        });
+        throw new Error(
+          `Import ${status}: ${JSON.stringify(data)}; direct: ${JSON.stringify(direct.error)}`,
+        );
+      }
       importId = data.import_id;
       assertEquals(data.bestand.regels, 79);
       assertEquals(data.bestand.eindtotaal.uren, 171.75);
