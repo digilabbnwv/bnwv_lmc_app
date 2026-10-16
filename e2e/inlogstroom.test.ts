@@ -441,6 +441,41 @@ Deno.test({
       },
     );
 
+    await t.step('weergaven: gepland versus gerealiseerd en teamoverzicht', async () => {
+      const sj = await manager.from('schooljaar').select('id').eq('naam', '2025-2026').single();
+      const sanne = await medewerkerId(admin, 'sanne.devries@voorbeeld.test');
+      const { data, error } = await manager.rpc('gepland_vs_gerealiseerd', {
+        p_medewerker_id: sanne,
+        p_schooljaar_id: sj.data!.id,
+      });
+      assertEquals(error, null);
+      const rijen = data as {
+        werkpakket_id: string | null;
+        gerealiseerd: number;
+        gepland: number;
+      }[];
+      const gerealiseerd = rijen.reduce((t, r) => t + Number(r.gerealiseerd), 0);
+      const { data: los } = await manager
+        .from('gerealiseerd')
+        .select('uren')
+        .eq('medewerker_id', sanne)
+        .gte('datum', '2025-08-01')
+        .lte('datum', '2026-07-31');
+      const verwacht = (los ?? []).reduce((t, r) => t + Number(r.uren), 0);
+      assert(verwacht > 0, 'Sanne heeft gerealiseerde uren in de fixture');
+      assertEquals(Math.round(gerealiseerd * 1000), Math.round(verwacht * 1000));
+      assert(
+        rijen.some((r) => r.werkpakket_id === null),
+        'project 999 staat apart (niet gekoppeld)',
+      );
+      assert(rijen.some((r) => Number(r.gepland) > 0), 'Sanne heeft geplande uren uit de seed');
+
+      const team = await manager.from('belasting_schooljaar').select('medewerker_id, inzetbaar')
+        .eq('schooljaar_id', sj.data!.id);
+      assertEquals(team.error, null);
+      assert((team.data ?? []).filter((r) => Number(r.inzetbaar) > 0).length >= 5);
+    });
+
     await t.step('MATT-import: terugdraaien', async () => {
       assertEquals(
         (await manager.rpc('matt_import_terugdraaien', { p_import_id: importId })).error,

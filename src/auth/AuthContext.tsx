@@ -14,6 +14,8 @@ interface AuthWaarde {
   /** Geverifieerde TOTP-factoren (toestellen). */
   factoren: Factor[];
   rollen: Rol[];
+  /** ID van de eigen medewerker (na volledige inlog), anders null. */
+  medewerkerId: string | null;
   /** Laadt de toestand opnieuw, bijvoorbeeld na een wachtwoordwijziging of MFA-verificatie. */
   vernieuw: () => Promise<void>;
   uitloggen: () => Promise<void>;
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [gebruiker, setGebruiker] = useState<User | null>(null);
   const [factoren, setFactoren] = useState<Factor[]>([]);
   const [rollen, setRollen] = useState<Rol[]>([]);
+  const [medewerkerId, setMedewerkerId] = useState<string | null>(null);
 
   const vernieuw = useCallback(async () => {
     const client = supabase();
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setGebruiker(null);
       setFactoren([]);
       setRollen([]);
+      setMedewerkerId(null);
       setToestand({ ...BEGIN, geladen: true });
       return;
     }
@@ -62,17 +66,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const status = (statusAntwoord.data ?? {}) as Status;
 
     let eigenRollen: Rol[] = [];
+    let eigenMedewerker: string | null = null;
     if (aal === 'aal2') {
-      const { data } = await client
-        .from('gebruiker_rol')
-        .select('rol')
-        .eq('gebruiker_id', sessie.user.id);
-      eigenRollen = (data ?? []).map((r) => r.rol);
+      const [rolAntwoord, profielAntwoord] = await Promise.all([
+        client.from('gebruiker_rol').select('rol').eq('gebruiker_id', sessie.user.id),
+        client
+          .from('profiel')
+          .select('medewerker_id')
+          .eq('gebruiker_id', sessie.user.id)
+          .maybeSingle(),
+      ]);
+      eigenRollen = (rolAntwoord.data ?? []).map((r) => r.rol);
+      eigenMedewerker = profielAntwoord.data?.medewerker_id ?? null;
     }
 
     setGebruiker(sessie.user);
     setFactoren(geverifieerd);
     setRollen(eigenRollen);
+    setMedewerkerId(eigenMedewerker);
     setToestand({
       geladen: true,
       sessie: true,
@@ -112,8 +123,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const waarde = useMemo<AuthWaarde>(
-    () => ({ stap: bepaalStap(toestand), gebruiker, factoren, rollen, vernieuw, uitloggen }),
-    [toestand, gebruiker, factoren, rollen, vernieuw, uitloggen],
+    () => ({
+      stap: bepaalStap(toestand),
+      gebruiker,
+      factoren,
+      rollen,
+      medewerkerId,
+      vernieuw,
+      uitloggen,
+    }),
+    [toestand, gebruiker, factoren, rollen, medewerkerId, vernieuw, uitloggen],
   );
 
   return <AuthContext.Provider value={waarde}>{children}</AuthContext.Provider>;

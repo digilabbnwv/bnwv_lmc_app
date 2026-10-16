@@ -93,6 +93,50 @@ Accounts maak je via de app aan, maar daarvoor is al een manager of beheerder no
 - [ ] **Authentication → Emails → Reset password**: vervang de tekst door "Wachtwoordherstel per e-mail is uitgeschakeld. Neem contact op met een beheerder." **zonder** link.
 - [ ] **Authentication → Emails → Magic link**: idem (er is geen inlog per e-maillink).
 
-## 4. Voor ingebruikname met echte gegevens (buiten deze opdracht)
+## 4. Testproject in gebruik nemen (fase 6)
+
+Alleen met **fictieve** gegevens (de seed). Volg de stappen in deze volgorde. Bij stappen met **(eigenaar)** voer je zelf iets in (inloggen, wachtwoord); de andere stappen kan Claude via de CLI uitvoeren, na akkoord per stap.
+
+1. **(eigenaar)** Supabase-testproject `bnwv-lmc-test` aanmaken in een EU-regio. Noteer de _project ref_ en bewaar het databasewachtwoord in de wachtwoordkluis.
+2. **(eigenaar)** In een terminal in de projectmap:
+
+   ```bash
+   supabase login
+   ```
+
+   ```bash
+   supabase link --project-ref <test-project-ref>
+   ```
+
+3. Migraties en de fictieve seed naar het testproject:
+
+   ```bash
+   supabase db push --include-seed
+   ```
+
+4. Edge Functions en toegestane origins:
+
+   ```bash
+   supabase functions deploy gebruiker-aanmaken account-resetten matt-import
+   ```
+
+   ```bash
+   supabase secrets set TOEGESTANE_ORIGINS=https://digilabbnwv.github.io
+   ```
+
+5. **(eigenaar)** Dashboard: de auth-instellingen en e-mailsjablonen uit §3. Site URL en Redirect URL: `https://digilabbnwv.github.io/bnwv_lmc_app/`.
+6. **(eigenaar)** Eerste beheerder volgens §3, met een **fictieve** medewerker uit de seed (bijv. `sanne.devries@voorbeeld.test`; het domein `voorbeeld.test` is het toegestane domein in de seed).
+7. **(eigenaar)** GitHub → Settings → Secrets and variables → Actions → _Variables_:
+   - `VITE_SUPABASE_URL` = `https://<test-project-ref>.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY` = de _anon_ / _publishable_ key (publiek; nooit de `service_role`-sleutel)
+   - `PAGES_DEPLOY_ENABLED` = `true`
+
+   En Settings → Pages → Source = _GitHub Actions_.
+
+8. Een push naar `main` (of een merge) start na een groene CI de deploy. De app staat op `https://digilabbnwv.github.io/bnwv_lmc_app/`.
+9. Rondgang op laptop én tablet: inloggen, TOTP, beheer, MATT-import met `fixtures/matt-export-synthetisch.xml`, de overzichten, en de browserconsole zonder CSP-meldingen.
+10. **Tablets met MDM (JAMF):** controleer bij IT dat JavaScript is toegestaan voor `digilabbnwv.github.io` op de iPads die LMC'ers gebruiken. Bij een eerdere webuitrol stond JavaScript op kiosk-iPads uit; zonder JavaScript werkt de app niet.
+
+## 5. Voor ingebruikname met echte gegevens (buiten deze opdracht)
 
 Betaald Supabase-plan met back-ups, een verwerkersovereenkomst, akkoord van de FG en akkoord van de ondernemingsraad.
