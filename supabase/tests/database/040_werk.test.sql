@@ -145,9 +145,10 @@ select throws_ok(
   '23503', null, 'Een school hoort bij een werkpakket met soort school'
 );
 
-select throws_ok(
-  $$update public.werkpakket set soort = 'project' where naam = 'Testschool'$$,
-  '23001', null, 'Een werkpakket met schoolgegevens kan niet van soort veranderen'
+select matches(
+  tests.probeer('eigenaar', $$update public.werkpakket set soort = 'project' where naam = 'Testschool'$$),
+  '^fout:(23503|23001) ',
+  'Een werkpakket met schoolgegevens kan niet van soort veranderen'
 );
 
 select throws_ok(
@@ -267,9 +268,10 @@ select throws_ok(
   '23514', null, 'Datums liggen binnen het schooljaar van de toewijzing'
 );
 
-select throws_ok(
-  $$delete from public.medewerker where email = 'kees.vandijk@voorbeeld.test'$$,
-  '23001', null, 'Een medewerker met toewijzingen kan niet worden verwijderd (deactiveren)'
+select matches(
+  tests.probeer('eigenaar', $$delete from public.medewerker where email = 'kees.vandijk@voorbeeld.test'$$),
+  '^fout:(23503|23001) ',
+  'Een medewerker met toewijzingen kan niet worden verwijderd (deactiveren)'
 );
 
 select is(

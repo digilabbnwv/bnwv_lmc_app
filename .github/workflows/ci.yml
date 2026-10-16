@@ -46,7 +46,18 @@ jobs:
       - name: Lokale database starten (migraties en seed)
         run: supabase db start
       - name: pgTAP-tests
-        run: supabase test db
+        run: |
+          set -o pipefail
+          supabase test db 2>&1 | tee pgtap.log
+      # Logs zijn alleen zichtbaar voor ingelogde gebruikers; annotaties ook via de API.
+      # Bevat uitsluitend synthetische testdata.
+      - name: Mislukte tests als annotatie
+        if: failure()
+        run: |
+          regels=$(grep -E '^(not ok|# |psql|ERROR|FATAL|Failed|Dubious|Parse errors|Result|Files=)|Wstat|planned' pgtap.log | head -n 80 || true)
+          if [ -z "$regels" ]; then regels=$(tail -n 40 pgtap.log); fi
+          bericht=$(printf '%s' "$regels" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=pgTAP-uitvoer::$bericht"
 
   edge-functions:
     runs-on: ubuntu-latest
