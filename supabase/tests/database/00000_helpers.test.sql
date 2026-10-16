@@ -89,7 +89,9 @@ begin
   perform tests.maak_gebruiker('zonder_medewerker', '{lmc}', false);
   perform tests.maak_gebruiker('inactief', '{coordinator}', true, false);
   perform tests.maak_gebruiker('moet_wijzigen', '{manager}', true, true, true);
-  insert into tests.persona (naam, db_rol) values ('anon', 'anon'), ('service_role', 'service_role');
+  insert into tests.persona (naam, db_rol) values ('anon', 'anon'), ('service_role', 'service_role'),
+    -- Tabeleigenaar (zoals de migraties); voor tests van constraints.
+    ('eigenaar', 'postgres');
 end
 $$;
 
