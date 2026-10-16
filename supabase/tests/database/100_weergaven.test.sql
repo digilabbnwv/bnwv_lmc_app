@@ -39,7 +39,8 @@ select * from public.gepland_vs_gerealiseerd(
 
 select results_eq(
   $$select categorie::text, round(gepland, 4), round(gerealiseerd, 4) from resultaat
-    where werkpakket_naam = 'Kinderboekenweek' order by categorie$$,
+    where werkpakket_naam = 'Kinderboekenweek'
+    order by array_position(enum_range(null::public.boeking_categorie), categorie::public.boeking_categorie)$$,
   $$values ('uitvoering', 10.0000, 3.0000), ('voorbereiding_afronding', 6.0000, 1.5000),
            ('relatiebeheer', 0.0000, 0.5000)$$,
   'Per categorie: gepland (voorbereiding + afronding samen) naast gerealiseerd; relatiebeheer niet gepland'
