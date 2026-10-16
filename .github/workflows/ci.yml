@@ -81,8 +81,15 @@ jobs:
         run: |
           supabase gen types typescript --local > /tmp/database.types.ts
           if ! diff -q src/lib/database.types.ts /tmp/database.types.ts > /dev/null; then
-            inhoud=$(sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' /tmp/database.types.ts)
-            echo "::error title=database.types.ts is verouderd::$inhoud"
+            # Annotaties zijn max. 4096 tekens: gecomprimeerd (gzip + base64) in delen.
+            # Herstellen: delen achter elkaar, base64 -d | gunzip > src/lib/database.types.ts
+            { gzip -9 -c /tmp/database.types.ts | base64 -w0 | fold -w 4000; echo; } > /tmp/delen.txt
+            totaal=$(wc -l < /tmp/delen.txt)
+            n=0
+            while IFS= read -r deel; do
+              n=$((n + 1))
+              echo "::error title=database.types.ts verouderd (deel ${n}/${totaal})::${deel}"
+            done < /tmp/delen.txt
             exit 1
           fi
       - name: End-to-end-test inlogstroom

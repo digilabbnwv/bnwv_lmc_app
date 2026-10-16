@@ -260,3 +260,87 @@ Volgens SPEC §10. De uitvoering volgt in versie 2 via `pg_cron`.
   4. het aantal verwijderde rijen per schooljaar in het auditlog schrijven.
 - **Verwijderen:** teruggedraaide en concept-imports ouder dan de termijn worden volledig verwijderd.
 - **Auditlog:** krijgt een eigen bewaartermijn, nog vast te stellen met de FG. Dat vraagt een gecontroleerde uitzondering op de append-only-trigger, uitsluitend voor deze job.
+
+## Fase 2 — Authenticatie
+
+### 2026-10-17 · Inlogstroom via `mijn_status()`
+
+**Keuze:** de frontend bepaalt de stap met de pure functie `bepaalStap()`. Die gebruikt de sessie, het `aal`-niveau, de geverifieerde TOTP-factoren en `public.mijn_status()`. Die functie werkt al op `aal1`, maar geeft alleen eigen vlaggen terug en geen gegevens. Met een gekoppeld toestel komt eerst de TOTP-code en pas daarna een eventuele wachtwoordwijziging.
+**Reden:** Supabase staat een wachtwoordwijziging bij een gekoppeld toestel alleen op `aal2` toe. De frontend verbergt alleen; RLS blijft beslissen.
+
+### 2026-10-17 · Wachtwoordvlag via een trigger op `auth.users`
+
+**Keuze:** de trigger `bnwv_wachtwoord_gewijzigd` zet `moet_wachtwoord_wijzigen` op false zodra `encrypted_password` werkelijk verandert. `account-resetten` zet de vlag na het tijdelijke wachtwoord direct weer op true (met `service_role`).
+**Reden:** bevestigd door de eigenaar. Er is geen extra Edge Function nodig, en een gebruiker kan de vlag niet uitzetten zonder het wachtwoord echt te wijzigen.
+**Restrisico:** mislukt de laatste stap van een reset, dan meldt de functie 500. Het account blijft dan zonder toegang, want de vlag stond al op true en de sessies zijn al beëindigd.
+
+### 2026-10-17 · Rechtencontrole in de database, ook voor Edge Functions
+
+**Keuze:** beide functies roepen eerst `mag_gebruikers_beheren()` aan met de JWT van de aanroeper.
+
+- `gebruiker-aanmaken` legt `profiel` en `gebruiker_rol` vast met die JWT. Zo dwingt RLS de rolregels uit fase 1 af, en registreert de audit-trigger wie het deed.
+- `account-resetten` gebruikt de RPC `account_reset_voorbereiden()`, die ook het eigen account weigert.
+
+Pas daarna gebruiken de functies de admin-API (`service_role`), alleen voor wat alleen die kan: een account aanmaken of verwijderen, factoren verwijderen en een wachtwoord zetten.
+**Reden:** SPEC §1 ("de database beslist"). Bovendien noemt het auditlog zo de echte uitvoerder in plaats van `service_role`.
+
+### 2026-10-17 · Een beheerder resetten alleen door een beheerder
+
+**Keuze:** `account_reset_voorbereiden()` weigert een manager die een beheerder wil resetten.
+**Reden:** dezelfde regel als bij rollen toekennen. Anders kan een manager een beheerdersaccount overnemen: resetten, het tijdelijke wachtwoord gebruiken en zo omschrijvingen lezen.
+
+### 2026-10-17 · Sessies beëindigen bij reset en deactiveren
+
+**Keuze:** `private.beeindig_sessies()` verwijdert `auth.sessions` en `auth.refresh_tokens` van de gebruiker. Dat gebeurt bij een reset en via een trigger zodra `medewerker.actief` op false gaat.
+**Reden:** SPEC §7 ("trekt de toegang direct in"). Een nog geldig access token geeft daarna ook niets meer, omdat `heeft_toegang()` de vlag, de rol en de actieve medewerker controleert.
+
+### 2026-10-17 · Account-e-mail = medewerker-e-mail
+
+**Keuze:** `gebruiker-aanmaken` vraagt alleen `medewerker_id` en rollen. Het e-mailadres komt van de medewerker en moet binnen `toegestaan_email_domein` vallen; subdomeinen tellen niet mee.
+**Reden:** bevestigd door de eigenaar. Zo is er minder invoer en minder kans op fouten.
+
+### 2026-10-17 · Tijdelijk wachtwoord
+
+**Keuze:** 20 tekens uit een alfabet van 57 zonder verwarrende tekens (geen 0/O, 1/l/I), gemaakt met `crypto.getRandomValues` en rejection sampling. Dat is ongeveer 116 bits. Het wachtwoord staat alleen in het antwoord (`Cache-Control: no-store`) en wordt nergens opgeslagen.
+**Reden:** SPEC §7 ("sterk tijdelijk wachtwoord, één keer teruggeven").
+
+### 2026-10-17 · Uitloggen na 30 minuten inactiviteit
+
+**Keuze:** de frontend logt uit na 30 minuten zonder muis-, toets- of aanraakactiviteit.
+**Reden:** bevestigd door de eigenaar. De time-out in het Supabase-dashboard vraagt een betaald plan (zie SETUP.md); dit is een gratis aanvulling.
+
+### 2026-10-17 · Klaar voor OAuth zonder datamodelwijziging
+
+**Keuze:** de Supabase-client gebruikt `flowType: 'pkce'` en `detectSessionInUrl: false`. De koppeling met een medewerker staat in `profiel` en is niet gebonden aan een inlogmethode.
+**Reden:** SPEC §7. Een latere Entra ID-login kan een bestaand `auth.users`-record koppelen. Tot die tijd komen er nooit tokens in een URL.
+
+### 2026-10-17 · CI op elke push; end-to-end-test met de volledige stack
+
+**Keuze:**
+
+- **Trigger:** CI draait bij een push op elke branch, in plaats van bij pull requests.
+- **Nieuwe job `e2e`:**
+  1. start `supabase start`, zonder studio, storage, realtime en logging;
+  2. controleert of `src/lib/database.types.ts` gelijk is aan `supabase gen types`;
+  3. draait `e2e/inlogstroom.test.ts` (Deno), die de hele stroom doorloopt met zelf berekende TOTP-codes:
+     - inloggen op `aal1` geeft geen toegang;
+     - wachtwoord wijzigen;
+     - TOTP koppelen, ook een tweede toestel;
+     - account aanmaken;
+     - een rol of domein dat niet mag wordt geweigerd;
+     - een eigen reset wordt geweigerd;
+     - een reset door de manager;
+     - deactiveren.
+- **Verouderde types:** zet de job het gegenereerde bestand gecomprimeerd in annotaties. Die zijn ook zonder inloggen te lezen.
+
+**Reden:** de eigenaar wilde het sterkste bewijs. Status checks gelden per commit, dus ook voor een PR met die commit. Lokaal is Docker niet beschikbaar.
+
+### 2026-10-17 · Dependabot negeert TypeScript ≥ 7 en `@types/node` ≥ 25
+
+**Keuze:** zie `.github/dependabot.yml`.
+**Reden:** `typescript-eslint` ondersteunt TypeScript 7 nog niet, en de Node-typen volgen `.nvmrc` (24).
+
+### 2026-10-17 · Expliciete rechten voor `service_role`
+
+**Keuze:** migratie `20261017000008` kent `service_role` select, insert, update en delete toe op alle tabellen in `public`; op het auditlog alleen select. `beveilig_tabel()` doet dat voortaan voor elke nieuwe tabel, en de fundamenttest controleert het.
+**Reden:** nieuwere Supabase-versies kennen nieuwe tabellen niet meer automatisch toe aan `service_role` (gevonden via de e2e-test). Edge Functions hebben die rechten nodig. `service_role` bestaat alleen als secret in Edge Functions (SPEC §1).

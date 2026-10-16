@@ -7,3 +7,4 @@ supabase/functions
 supabase/.temp
 docs/SPEC.md
 e2e
+src/lib/database.types.ts
