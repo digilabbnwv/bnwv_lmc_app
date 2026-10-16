@@ -338,6 +338,105 @@ Deno.test({
       assert(r.staffel > 0 && r.opslagfactor > 0 && r.schoolvakantie > 0);
     });
 
+    const fixture = await Deno.readTextFile(
+      new globalThis.URL('../fixtures/matt-export-synthetisch.xml', import.meta.url),
+    );
+    const importeer = async (client: SupabaseClient, xml: string, van: string, tot: string) => {
+      const { data: sessie } = await client.auth.getSession();
+      const res = await fetch(`${URL}/functions/v1/matt-import`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessie.session?.access_token ?? ''}`,
+          apikey: ANON!,
+          'Content-Type': 'application/xml',
+          'X-Periode-Van': van,
+          'X-Periode-Tot': tot,
+        },
+        body: xml,
+      });
+      return { status: res.status, data: await res.json().catch(() => null) };
+    };
+    const fixtureMedewerkers = async () => {
+      const { data } = await admin
+        .from('medewerker_alias')
+        .select('medewerker_id')
+        .eq('bron', 'matt');
+      return (data ?? []).map((a) => a.medewerker_id as string);
+    };
+    const gerealiseerdAantal = async () => {
+      const { data, error } = await manager
+        .from('gerealiseerd')
+        .select('boeking_id')
+        .in('medewerker_id', await fixtureMedewerkers())
+        .gte('datum', '2026-01-01')
+        .lte('datum', '2026-03-31');
+      if (error) throw error;
+      return data.length;
+    };
+
+    await t.step('MATT-import: weigeringen (aal1, DOCTYPE, periode)', async () => {
+      const opAal1 = await inloggen(managerEmail, managerNieuw);
+      assertEquals((await importeer(opAal1, fixture, '2026-01-01', '2026-03-31')).status, 403);
+      const doctype = fixture.replace('?>', '?><!DOCTYPE Report [<!ENTITY a "b">]>');
+      assertEquals((await importeer(manager, doctype, '2026-01-01', '2026-03-31')).status, 400);
+      const buiten = await importeer(manager, fixture, '2026-02-01', '2026-03-31');
+      assertEquals(buiten.status, 400);
+      assert(String(buiten.data?.fout).includes('buiten de periode'));
+    });
+
+    let importId = '';
+    await t.step('MATT-import: voorvertoning van de synthetische fixture', async () => {
+      const { status, data } = await importeer(manager, fixture, '2026-01-01', '2026-03-31');
+      assertEquals(status, 200, JSON.stringify(data));
+      importId = data.import_id;
+      assertEquals(data.bestand.regels, 79);
+      assertEquals(data.bestand.eindtotaal.uren, 171.75);
+      assertEquals(data.medewerkers.length, 5, 'de vijf fictieve medewerkers zijn gematcht');
+      assertEquals(data.niet_gematcht_aantal, 1);
+      assertEquals(data.niet_gematcht[0].naam, 'Testpersoon Onbekend');
+      assert(
+        data.niet_gekoppelde_projecten.some((p: { projectnummer: string }) =>
+          p.projectnummer === '999'
+        ),
+        'project 999 is onbekend en dus niet gekoppeld',
+      );
+      assertEquals(await gerealiseerdAantal(), 0, 'een concept telt nog niet mee');
+    });
+
+    await t.step(
+      'MATT-import: definitief, en een tweede import geeft geen duplicaten',
+      async () => {
+        assertEquals(
+          (await manager.rpc('matt_import_definitief_maken', { p_import_id: importId })).error,
+          null,
+        );
+        const eerste = await gerealiseerdAantal();
+        assertEquals(eerste, 78, '79 boekingen min die van Testpersoon Onbekend');
+
+        const tweede = await importeer(manager, fixture, '2026-01-01', '2026-03-31');
+        assertEquals(tweede.status, 200);
+        importId = tweede.data.import_id;
+        assertEquals(
+          (await manager.rpc('matt_import_definitief_maken', { p_import_id: importId })).error,
+          null,
+        );
+        assertEquals(await gerealiseerdAantal(), 78, 'na een tweede import nog steeds 78');
+        const { data: niet } = await manager
+          .from('matt_import_niet_gematcht')
+          .select('naam')
+          .eq('import_id', importId);
+        assertEquals(niet?.length, 0, 'niet-gematchte namen zijn na definitief maken weg');
+      },
+    );
+
+    await t.step('MATT-import: terugdraaien', async () => {
+      assertEquals(
+        (await manager.rpc('matt_import_terugdraaien', { p_import_id: importId })).error,
+        null,
+      );
+      assertEquals(await gerealiseerdAantal(), 0, 'teruggedraaide boekingen tellen niet meer mee');
+    });
+
     await t.step('deactiveren trekt de toegang direct in', async () => {
       const kort = await inloggen(
         lotteEmail,

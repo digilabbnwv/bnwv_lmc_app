@@ -11,6 +11,8 @@ export interface Rechten {
   werkBeheren: boolean;
   /** Scholen, activiteiten, projecten en toewijzingen inzien. */
   werkInzien: boolean;
+  /** MATT-exports importeren en terugdraaien. */
+  importeren: boolean;
   /** MATT-projecten koppelen (onderdeel van de import). */
   mattProjecten: boolean;
   /** Accounts aanmaken en resetten. */
@@ -27,6 +29,7 @@ export function rechtenVoor(rollen: readonly Rol[]): Rechten {
     medewerkers: cmb,
     werkBeheren: heeft('coordinator', 'manager'),
     werkInzien: cmb,
+    importeren: cmb,
     mattProjecten: cmb,
     accounts: heeft('manager', 'beheerder'),
     beheer: cmb,

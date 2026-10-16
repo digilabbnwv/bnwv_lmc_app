@@ -462,3 +462,70 @@ Het doel-schooljaar moet leeg zijn. Toewijzingen worden niet gekopieerd.
 
 **Keuze:** componenten en schema's worden getest met Vitest, data en rechten met pgTAP en de e2e-test. Er is geen Playwright.
 **Reden:** bevestigd door de eigenaar: minder dependencies en een snellere CI.
+
+## Fase 5 — MATT-import
+
+### 2026-10-20 · Taakverdeling tussen Edge Function en database
+
+**Keuze:**
+
+- **Edge Function `matt-import`:** controleert rechten, grootte, DOCTYPE/ENTITY, root en namespace; parseert het bestand; controleert subtotalen en periode.
+- **RPC `matt_import_concept_opslaan`:** matcht medewerkers met dezelfde `normaliseer_naam()` als de aliassen, maakt onbekende projectnummers aan, bepaalt de categorie en slaat het concept op, alles in één transactie.
+- **Definitief maken, terugdraaien en verwerpen:** eigen RPC's.
+
+Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaien onder de JWT van de aanroeper.
+**Reden:** de matchregel staat op één plek. De database beslist over rechten en transacties, en het auditlog noemt de echte uitvoerder.
+
+### 2026-10-20 · Bestand als ruwe XML, periode in headers
+
+**Keuze:** de frontend stuurt de XML als body (`application/xml`) en de periode in `X-Periode-Van` en `X-Periode-Tot`. De functie bewaart het bestand niet en negeert `schemaLocation`.
+**Reden:**
+
+- XML in JSON wordt door alle escapes merkbaar groter, wat de 10 MB-grens zou vertroebelen;
+- de periode hoort niet in de URL (SPEC §2).
+
+### 2026-10-20 · `fast-xml-parser` 5.11.1
+
+**Keuze:** XML parsen met `npm:fast-xml-parser@5.11.1`, alleen in de Edge Function, met `processEntities: false`. DOCTYPE en ENTITY zijn dan al vóór het parsen geweigerd.
+**Reden:** zelf XML parsen is foutgevoelig. Er is bewust een versie gekozen die al ruim een maand bestaat, niet de nieuwste van drie weken.
+
+### 2026-10-20 · Niet-gematchte namen in een aparte tabel zonder audit
+
+**Keuze:** `matt_import_niet_gematcht` (naam, aantal, uren) bestaat alleen zolang een import concept is. Bij definitief maken wordt hij geleegd, en er zit geen audit-trigger op. `matt_import.aantallen` bevat alleen medewerker-ID's, projectnummers en aantallen.
+**Reden:** dataminimalisatie. Met een audit-trigger zouden namen van niet-gematchte personen voor altijd in het append-only auditlog staan.
+
+### 2026-10-20 · Weekendboekingen geaccepteerd
+
+**Keuze:** boekingen op zaterdag en zondag worden geïmporteerd en tellen mee als gerealiseerd.
+**Reden:** bevestigd door de eigenaar; dit was het voorstel uit fase 0. Capaciteit rekent per werkdag, maar realisatie is wat er werkelijk geboekt is.
+
+### 2026-10-20 · Terugdraaien verwijdert de boekingen
+
+**Keuze:** bij terugdraaien worden de boekingen en omschrijvingen van de import verwijderd; de import blijft als regel met aantallen in de historie. Boekingen die deze import eerder heeft vervangen, komen niet terug. Het scherm meldt dat bij het terugdraaien.
+**Reden:** bevestigd door de eigenaar (dataminimalisatie). Wie die periode weer nodig heeft, importeert hem opnieuw.
+
+### 2026-10-20 · Onbekende artikelcode: opslaan en waarschuwen
+
+**Keuze:** zo'n boeking wordt opgeslagen met een lege categorie; de voorvertoning noemt de artikelcode.
+**Reden:** bevestigd door de eigenaar. De uren gaan niet verloren, en de mapping kan worden aangevuld.
+
+### 2026-10-20 · Concepten opruimen
+
+**Keuze:** bij elk nieuw concept worden concepten ouder dan 24 uur verwijderd. Het scherm verwerpt een eerder concept uit dezelfde sessie bij "Opnieuw controleren".
+**Reden:** een concept bevat persoonsgegevens (omschrijvingen, niet-gematchte namen) die niet blijven liggen. Automatisch opruimen met `pg_cron` volgt in versie 2.
+
+### 2026-10-20 · View `gerealiseerd`
+
+**Keuze:** `public.gerealiseerd` (security_invoker) bevat de boekingen uit definitieve imports, zonder genegeerde projecten. Voor de status gebruikt hij `private.import_is_definitief()` (SECURITY DEFINER, geeft alleen ja of nee).
+**Reden:** de basis voor gepland versus gerealiseerd in fase 6. Een lmc mag `matt_import` zelf niet lezen, maar moet de eigen gerealiseerde uren wel kunnen zien.
+
+### 2026-10-20 · Negatieve fixtures uit een generator
+
+**Keuze:**
+
+- `supabase/functions/matt-import/varianten.ts` maakt `fixtures/matt-varianten/*.xml`;
+- `deno task fixtures` maakt ze opnieuw aan;
+- een test controleert dat de gecommitte bestanden gelijk zijn aan de generator;
+- het te grote bestand (> 10 MB) maakt de test zelf aan.
+
+**Reden:** SPEC §8 ("genereer de negatieve varianten als aparte fixtures op basis van de geldige fixture"). Zo komt er geen 10 MB in de repository.

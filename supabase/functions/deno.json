@@ -8,7 +8,9 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
   },
   "fmt": {
@@ -16,6 +18,7 @@
     "singleQuote": true
   },
   "tasks": {
-    "check": "deno fmt --check && deno lint && deno check . && deno test"
+    "check": "deno fmt --check && deno lint && deno check . && deno test --allow-read=../../fixtures",
+    "fixtures": "deno run --allow-read=../../fixtures --allow-write=../../fixtures matt-import/varianten.ts"
   }
 }
