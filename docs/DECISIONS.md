@@ -339,3 +339,8 @@ Pas daarna gebruiken de functies de admin-API (`service_role`), alleen voor wat 
 
 **Keuze:** zie `.github/dependabot.yml`.
 **Reden:** `typescript-eslint` ondersteunt TypeScript 7 nog niet, en de Node-typen volgen `.nvmrc` (24).
+
+### 2026-10-17 · Expliciete rechten voor `service_role`
+
+**Keuze:** migratie `20261017000008` kent `service_role` select, insert, update en delete toe op alle tabellen in `public`; op het auditlog alleen select. `beveilig_tabel()` doet dat voortaan voor elke nieuwe tabel, en de fundamenttest controleert het.
+**Reden:** nieuwere Supabase-versies kennen nieuwe tabellen niet meer automatisch toe aan `service_role` (gevonden via de e2e-test). Edge Functions hebben die rechten nodig. `service_role` bestaat alleen als secret in Edge Functions (SPEC §1).

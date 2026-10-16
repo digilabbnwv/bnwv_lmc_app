@@ -2,9 +2,36 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 select has_extension('pgtap', 'pgTAP is beschikbaar');
+
+-- Edge Functions gebruiken service_role; Supabase kent die rechten niet meer automatisch toe.
+select is_empty(
+  $$
+    select c.relname
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r', 'p')
+      and c.relname <> 'auditlog'
+      and not (
+        has_table_privilege('service_role', c.oid, 'select')
+        and has_table_privilege('service_role', c.oid, 'insert')
+        and has_table_privilege('service_role', c.oid, 'update')
+        and has_table_privilege('service_role', c.oid, 'delete')
+      )
+  $$,
+  'service_role heeft volledige rechten op elke tabel in public (behalve het auditlog)'
+);
+
+select ok(
+  has_table_privilege('service_role', 'public.auditlog', 'select')
+    and not has_table_privilege('service_role', 'public.auditlog', 'insert')
+    and not has_table_privilege('service_role', 'public.auditlog', 'update')
+    and not has_table_privilege('service_role', 'public.auditlog', 'delete'),
+  'service_role mag het auditlog alleen lezen'
+);
 
 select is_empty(
   $$
