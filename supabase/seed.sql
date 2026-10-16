@@ -1,0 +1,2 @@
+-- Seed met uitsluitend fictieve gegevens (fase 1).
+-- Nooit echte namen van medewerkers of echte MATT-exports opnemen.

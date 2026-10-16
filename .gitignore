@@ -1,0 +1,30 @@
+# --- Geheimen: nooit committen (zie CLAUDE.md) ---
+.env*
+
+# --- Exportbestanden: echte MATT-exports en planningsdocumenten blijven buiten de repo ---
+*.xml
+*.xlsx
+# Uitzondering: synthetische fixtures en testbestanden
+!fixtures/**/*.xml
+!fixtures/**/*.xlsx
+!supabase/tests/**/*.xml
+!supabase/tests/**/*.xlsx
+
+# --- Node / Vite ---
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+vite.config.*.timestamp-*
+
+# --- Supabase CLI ---
+supabase/.branches/
+supabase/.temp/
+
+# --- Editors en OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log

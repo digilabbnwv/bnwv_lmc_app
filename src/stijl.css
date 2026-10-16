@@ -1,0 +1,52 @@
+/* Neutrale basisstijl. Geen beoordelende kleuren (SPEC §1). */
+:root {
+  --tekst: #1f2328;
+  --achtergrond: #ffffff;
+  --rand: #d0d7de;
+  --gedempt: #57606a;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+  color: var(--tekst);
+  background: var(--achtergrond);
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-kop,
+.app-voet {
+  padding: 0.75rem 1.5rem;
+  border-color: var(--rand);
+}
+
+.app-kop {
+  border-bottom: 1px solid var(--rand);
+}
+
+.app-kop h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.app-inhoud {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.app-voet {
+  border-top: 1px solid var(--rand);
+  color: var(--gedempt);
+  font-size: 0.875rem;
+}
