@@ -2,7 +2,7 @@
 // (SPEC §7, fase 2). Draait in CI na `supabase start`; vereist SUPABASE_URL,
 // SUPABASE_ANON_KEY en SUPABASE_SERVICE_ROLE_KEY. Alleen fictieve seedgegevens.
 import { assert, assertEquals, assertExists } from '@std/assert';
-import { createClient, FunctionsHttpError, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { totp } from './totp.ts';
 
 const URL = Deno.env.get('SUPABASE_URL');
@@ -47,14 +47,21 @@ async function koppelTotp(client: SupabaseClient, naam: string): Promise<string>
   return data.id;
 }
 
+/** Roept een Edge Function aan met de sessie van de client; geeft de echte HTTP-status. */
 async function aanroep(client: SupabaseClient, functie: string, body: Record<string, unknown>) {
-  const { data, error } = await client.functions.invoke(functie, { body });
-  if (error instanceof FunctionsHttpError) {
-    const res = error.context as Response;
-    return { status: res.status, data: await res.json().catch(() => null) };
-  }
-  if (error) throw error;
-  return { status: 200, data };
+  const { data: sessie } = await client.auth.getSession();
+  const token = sessie.session?.access_token;
+  if (!token) throw new Error('Geen sessie');
+  const res = await fetch(`${URL}/functions/v1/${functie}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: ANON!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, data: await res.json().catch(() => null) };
 }
 
 async function medewerkerId(admin: SupabaseClient, email: string): Promise<string> {
@@ -95,6 +102,17 @@ Deno.test({
     );
 
     let manager!: SupabaseClient;
+
+    await t.step('zelf registreren is uitgeschakeld', async () => {
+      const { data, error } = await nieuweClient().auth.signUp({
+        email: 'kees.vandijk@voorbeeld.test',
+        password: 'Een-wachtwoord-om-te-registreren',
+      });
+      assertExists(error, 'registreren moet worden geweigerd');
+      assertEquals(data.user, null);
+      const { data: lijst } = await admin.auth.admin.listUsers();
+      assert(!lijst.users.some((u) => u.email === 'kees.vandijk@voorbeeld.test'));
+    });
 
     await t.step('op aal1 met een tijdelijk wachtwoord is er geen enkele toegang', async () => {
       manager = await inloggen(managerEmail, managerTijdelijk);
