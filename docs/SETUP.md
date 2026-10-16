@@ -33,9 +33,9 @@ Repository: `bnwv_lmc_app` (publiek).
   - force push en verwijderen blokkeren.
 - [ ] **Settings → Actions → General**: _Workflow permissions_ op _Read repository contents_; _Allow GitHub Actions to create and approve pull requests_ uit.
 - [ ] **Settings → Pages** (pas in fase 6): _Source_ = _GitHub Actions_.
-- [ ] **Settings → Secrets and variables → Actions** (pas in fase 6):
-  - variabelen `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` van het **testproject**;
-  - variabele `PAGES_DEPLOY_ENABLED` = `true` om de deploy te activeren.
+- [ ] **Settings → Secrets and variables → Actions → tabblad _Variables_ → _Repository variables_** (pas in fase 6). Let op: **variabelen**, geen secrets en geen environment-variabelen; de workflow leest `vars.…`.
+  - `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` van het Supabase-project;
+  - `PAGES_DEPLOY_ENABLED` = `true` om de deploy te activeren.
 
 ## 3. Supabase
 
@@ -126,14 +126,14 @@ Er is één project: **BNWV - LMC APP** (ref `hgpgrqkurnulenqcighy`). Het bevat 
 
 5. **(eigenaar)** Dashboard: de auth-instellingen en e-mailsjablonen uit §3. Site URL en Redirect URL: `https://digilabbnwv.github.io/bnwv_lmc_app/`.
 6. **(eigenaar)** Eerste beheerder volgens §3, met een **fictieve** medewerker uit de seed (bijv. `sanne.devries@voorbeeld.test`; het domein `voorbeeld.test` is het toegestane domein in de seed).
-7. **(eigenaar)** GitHub → Settings → Secrets and variables → Actions → _Variables_:
+7. **(eigenaar)** GitHub → Settings → Secrets and variables → Actions → tabblad _Variables_ → **Repository variables** (niet als _secret_: die ziet de workflow niet, en dan wordt _Deploy Pages_ overgeslagen):
    - `VITE_SUPABASE_URL` = `https://hgpgrqkurnulenqcighy.supabase.co`
    - `VITE_SUPABASE_ANON_KEY` = de _anon_ / _publishable_ key (publiek; nooit de `service_role`-sleutel)
    - `PAGES_DEPLOY_ENABLED` = `true`
 
    En Settings → Pages → Source = _GitHub Actions_.
 
-8. Een push naar `main` (of een merge) start na een groene CI de deploy. De app staat op `https://digilabbnwv.github.io/bnwv_lmc_app/`.
+8. Een push naar `main` (of een merge) start na een groene CI de deploy. Wordt _Deploy Pages_ overgeslagen, controleer dan de variabelen uit stap 7. Staat er op het adres alleen een lege pagina met `/src/main.tsx`, dan publiceert Pages nog vanaf de branch: zet de bron op _GitHub Actions_. De app staat op `https://digilabbnwv.github.io/bnwv_lmc_app/`.
 9. Rondgang op laptop én tablet: inloggen, TOTP, beheer, MATT-import met `fixtures/matt-export-synthetisch.xml`, de overzichten, en de browserconsole zonder CSP-meldingen.
 10. **Tablets met MDM (JAMF):** controleer bij IT dat JavaScript is toegestaan voor `digilabbnwv.github.io` op de iPads die LMC'ers gebruiken. Bij een eerdere webuitrol stond JavaScript op kiosk-iPads uit; zonder JavaScript werkt de app niet.
 
