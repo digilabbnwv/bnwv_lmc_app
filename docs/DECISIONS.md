@@ -583,6 +583,15 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 **Keuze:** `src/lib/zodConfig.ts` zet `z.config({ jitless: true })` en wordt als eerste geïmporteerd in `main.tsx`.
 **Reden:** zod v4 test anders met `new Function` of eval is toegestaan. Onze CSP verbiedt dat (SPEC §2), dus de browser meldt een CSP-schending, ook al vangt zod de fout op. Gevonden tijdens de rondgang in Firefox. Validatie werkt hetzelfde, alleen zonder JIT-optimalisatie.
 
+### 2026-10-17 · Duidelijke meldingen bij aanmaken; tijdelijk wachtwoord met alle tekenklassen
+
+**Keuze:**
+
+- `gebruiker-aanmaken` vertaalt de foutcode van Supabase Auth: `email_exists` en `user_already_exists` geven 409 ("bestaat al een gebruiker"); `weak_password` geeft 502, met een verwijzing naar het wachtwoordbeleid; andere fouten geven 502 met de foutcode.
+- Een tijdelijk wachtwoord bevat altijd minstens één hoofdletter, kleine letter, cijfer en leesteken, uit een alfabet van 65 tekens (ongeveer 120 bits).
+
+**Reden:** tijdens de rondgang gaf de algemene melding "bestaat het al?" geen houvast; er bestond een handmatig aangemaakte gebruiker. Met alle tekenklassen werkt aanmaken ook als in het dashboard per ongeluk samenstellingseisen aan staan. Voor wat de gebruiker zelf kiest geldt nog steeds SPEC §7: minimaal 12 tekens, geen samenstellingsregels.
+
 ## Interface — UI-1 Fundament
 
 ### 2026-10-17 · Huisstijl BNWV vertaald naar design tokens

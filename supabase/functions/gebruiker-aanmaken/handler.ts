@@ -38,6 +38,28 @@ export interface AanmaakPoort {
   verwijderAuthGebruiker(gebruikerId: string): Promise<void>;
 }
 
+/** Vertaalt een fout van Supabase Auth (admin.createUser) naar een begrijpelijke melding. */
+export function authFout(req: Request, origins: Set<string>, e: unknown): Response {
+  const code = e && typeof e === 'object' && 'code' in e ? String(e.code) : 'onbekend';
+  if (code === 'email_exists' || code === 'user_already_exists') {
+    return fout(
+      req,
+      origins,
+      409,
+      'Er bestaat al een gebruiker met dit e-mailadres (zie Authentication → Users in Supabase).',
+    );
+  }
+  if (code === 'weak_password') {
+    return fout(
+      req,
+      origins,
+      502,
+      'Supabase weigert het tijdelijke wachtwoord vanwege het wachtwoordbeleid. Zet bij Password requirements "No required characters" (zie docs/SETUP.md).',
+    );
+  }
+  return fout(req, origins, 502, `Supabase Auth weigerde het account (foutcode ${code}).`);
+}
+
 export function domeinVan(email: string): string {
   return email.slice(email.lastIndexOf('@') + 1).toLowerCase();
 }
@@ -84,8 +106,8 @@ export async function verwerk(
   let gebruikerId: string;
   try {
     gebruikerId = await poort.maakAuthGebruiker(medewerker.email, wachtwoord);
-  } catch {
-    return fout(req, origins, 409, 'Het account kon niet worden aangemaakt (bestaat het al?).');
+  } catch (e) {
+    return authFout(req, origins, e);
   }
 
   let koppeling: 'ok' | 'geweigerd';

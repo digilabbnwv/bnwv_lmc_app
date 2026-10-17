@@ -10,6 +10,8 @@ interface Stand {
   heeftAccount: boolean;
   domein: string | null;
   koppeling: 'ok' | 'geweigerd' | 'fout';
+  /** Foutcode van Supabase Auth bij aanmaken, of null. */
+  authFoutcode: string | null;
   aangemaakt: string[];
   verwijderd: string[];
   gekoppeld: { gebruikerId: string; rollen: string[] }[];
@@ -22,6 +24,7 @@ function stand(over: Partial<Stand> = {}): Stand {
     heeftAccount: false,
     domein: 'voorbeeld.test',
     koppeling: 'ok',
+    authFoutcode: null,
     aangemaakt: [],
     verwijderd: [],
     gekoppeld: [],
@@ -36,6 +39,9 @@ function poort(s: Stand): AanmaakPoort {
     heeftAccount: () => Promise.resolve(s.heeftAccount),
     toegestaanDomein: () => Promise.resolve(s.domein),
     maakAuthGebruiker: (email) => {
+      if (s.authFoutcode) {
+        return Promise.reject(Object.assign(new Error('auth'), { code: s.authFoutcode }));
+      }
       s.aangemaakt.push(email);
       return Promise.resolve('22222222-2222-4222-8222-222222222222');
     },
@@ -168,4 +174,26 @@ Deno.test('alleen POST; preflight alleen voor toegestane origins', async () => {
 
 Deno.test('domeinVan', () => {
   assertEquals(domeinVan('A.B@Voorbeeld.Test'), 'voorbeeld.test');
+});
+
+Deno.test('bestaande gebruiker in Auth: 409 met duidelijke melding', async () => {
+  for (const code of ['email_exists', 'user_already_exists']) {
+    const s = stand({ authFoutcode: code });
+    const { status, body } = await antwoord(s);
+    assertEquals(status, 409);
+    assert(body.fout.includes('bestaat al een gebruiker'));
+    assertEquals(s.gekoppeld, []);
+  }
+});
+
+Deno.test('wachtwoordbeleid weigert: 502 met verwijzing naar SETUP', async () => {
+  const { status, body } = await antwoord(stand({ authFoutcode: 'weak_password' }));
+  assertEquals(status, 502);
+  assert(body.fout.includes('Password requirements'));
+});
+
+Deno.test('andere Auth-fout: 502 met de foutcode', async () => {
+  const { status, body } = await antwoord(stand({ authFoutcode: 'over_request_rate_limit' }));
+  assertEquals(status, 502);
+  assert(body.fout.includes('over_request_rate_limit'));
 });
