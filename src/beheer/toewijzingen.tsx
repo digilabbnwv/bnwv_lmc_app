@@ -21,7 +21,7 @@ import {
   type Verdeling,
   type WerkpakketSoort,
 } from './data';
-import { SchooljaarKiezer } from './SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from './SchooljaarKiezer';
 import { v, type Formulierwaarden } from './schema';
 import type { BeheerDefinitie } from './types';
 
@@ -122,7 +122,7 @@ const isBron = (b: Bron) => (w: Formulierwaarden) => w.bron === b;
 const isVerdeling = (d: Verdeling) => (w: Formulierwaarden) => w.verdeling === d;
 
 export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
-  const [schooljaarId, setSchooljaarId] = useState<string | null>(null);
+  const schooljaarId = useSchooljaarKeuze();
   const [medewerkerFilter, setMedewerkerFilter] = useState('');
   const schooljaren = useSchooljaren();
   const medewerkers = useMedewerkers();
@@ -400,7 +400,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
   return (
     <>
       <div className="filters">
-        <SchooljaarKiezer waarde={schooljaarId} onWijzig={setSchooljaarId} />
+        <SchooljaarKiezer />
         <label className="veld">
           <span className="veld-label">Medewerker</span>
           <select

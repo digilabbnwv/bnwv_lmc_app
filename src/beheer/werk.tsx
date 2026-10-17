@@ -16,7 +16,7 @@ import {
   type Schooltype,
   type Vestiging,
 } from './data';
-import { SchooljaarKiezer } from './SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from './SchooljaarKiezer';
 import { v } from './schema';
 import type { BeheerDefinitie } from './types';
 
@@ -213,7 +213,7 @@ export const schoolJaarSchema = z
   });
 
 export function Leerlingen({ magBewerken }: { magBewerken: boolean }) {
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const scholen = useQuery({ queryKey: ['school'], queryFn: laadScholen });
   const staffel = useQuery({
     queryKey: ['staffel', schooljaar],
@@ -341,7 +341,7 @@ export function Leerlingen({ magBewerken }: { magBewerken: boolean }) {
 
   return (
     <>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {definitie ? <BeheerScherm definitie={definitie} magBewerken={magBewerken} /> : null}
     </>
   );

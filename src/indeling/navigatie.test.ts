@@ -40,7 +40,10 @@ describe('paginatitels', () => {
 
   it('onderliggende paden krijgen de titel van het menu-item', () => {
     const r = rechtenVoor(['manager']);
-    expect(paginaTitel('/beheer/scholen', r)).toBe('Beheer');
+    expect(paginaTitel('/beheer', r)).toBe('Beheer');
+    expect(paginaTitel('/beheer/scholen', r)).toBe('Scholen');
+    expect(paginaTitel('/beheer/medewerkers/abc', r)).toBe('Medewerkers');
+    expect(paginaTitel('/beheer/onbekend', r)).toBe('Beheer');
     expect(paginaTitel('/gepland-gerealiseerd/abc', r)).toBe('Gepland en gerealiseerd');
     expect(paginaTitel('/beheerx', r)).toBe('Pagina niet gevonden');
   });

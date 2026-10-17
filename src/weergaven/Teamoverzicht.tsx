@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { naamVan, ophalen, useMedewerkers } from '../beheer/data';
-import { SchooljaarKiezer } from '../beheer/SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from '../beheer/SchooljaarKiezer';
 import { formatUren } from '../lib/opmaak';
 import { supabase } from '../lib/supabase';
 import { metContract, sorteerTeam, type TeamRij, type TeamSortering } from './logica';
@@ -20,7 +20,7 @@ const KOLOMMEN: { op: TeamSortering; kop: string; numeriek?: boolean }[] = [
 ];
 
 export function Teamoverzicht() {
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const [sortering, setSortering] = useState<{ op: TeamSortering; oplopend: boolean }>({
     op: 'ruimte',
     oplopend: false,
@@ -61,7 +61,7 @@ export function Teamoverzicht() {
         Standaard gesorteerd op resterende ruimte. Alleen medewerkers met een contract in dit
         schooljaar.
       </p>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {belasting.isPending && schooljaar ? <p aria-busy="true">Bezig met laden…</p> : null}
       {belasting.data ? (
         <div className="tabel-schuif">

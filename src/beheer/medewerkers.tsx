@@ -2,6 +2,8 @@
 // beschikbaarheid en aliassen.
 import { useId, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { Kruimelpad } from '../components/ui/Kruimelpad';
+import { Tabbladen } from '../components/ui/Tabbladen';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
@@ -394,45 +396,23 @@ export function MedewerkerDetail({ magBewerken }: { magBewerken: boolean }) {
     [id],
   );
 
+  const naam = medewerker.data ? naamVan(medewerker.data) : 'Medewerker';
   return (
     <section aria-labelledby={`${basis}-titel`}>
-      <p>
-        <Link to="/beheer/medewerkers">← Alle medewerkers</Link>
-      </p>
-      <h2 id={`${basis}-titel`}>{medewerker.data ? naamVan(medewerker.data) : 'Medewerker'}</h2>
-      <div role="tablist" aria-label="Onderdelen" className="tabbladen">
-        {TABBLADEN.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            id={`${basis}-tab-${t}`}
-            aria-selected={tab === t}
-            aria-controls={`${basis}-paneel-${t}`}
-            tabIndex={tab === t ? 0 : -1}
-            className={tab === t ? 'tab actief' : 'tab'}
-            onClick={() => {
-              setTab(t);
-            }}
-            onKeyDown={(e) => {
-              const i = TABBLADEN.indexOf(t);
-              const volgende =
-                e.key === 'ArrowRight'
-                  ? TABBLADEN[(i + 1) % TABBLADEN.length]
-                  : e.key === 'ArrowLeft'
-                    ? TABBLADEN[(i + TABBLADEN.length - 1) % TABBLADEN.length]
-                    : undefined;
-              if (volgende) {
-                setTab(volgende);
-                document.getElementById(`${basis}-tab-${volgende}`)?.focus();
-              }
-            }}
-          >
-            {TABNAAM[t]}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" id={`${basis}-paneel-${tab}`} aria-labelledby={`${basis}-tab-${tab}`}>
+      <Kruimelpad
+        kruimels={[
+          { label: 'Beheer', pad: '/beheer' },
+          { label: 'Medewerkers', pad: '/beheer/medewerkers' },
+          { label: naam },
+        ]}
+      />
+      <h2 id={`${basis}-titel`}>{naam}</h2>
+      <Tabbladen
+        label="Onderdelen"
+        tabs={TABBLADEN.map((t) => ({ id: t, label: TABNAAM[t] }))}
+        actief={tab}
+        onKies={setTab}
+      >
         {tab === 'gegevens' ? (
           <BeheerScherm definitie={definities.gegevens} magBewerken={magBewerken} />
         ) : null}
@@ -448,7 +428,7 @@ export function MedewerkerDetail({ magBewerken }: { magBewerken: boolean }) {
         {tab === 'aliassen' ? (
           <BeheerScherm definitie={definities.aliassen} magBewerken={magBewerken} />
         ) : null}
-      </div>
+      </Tabbladen>
     </section>
   );
 }

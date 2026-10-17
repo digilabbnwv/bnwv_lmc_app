@@ -19,7 +19,7 @@ import {
   type Schooljaar,
   type Schooltype,
 } from './data';
-import { SchooljaarKiezer } from './SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from './SchooljaarKiezer';
 import { v } from './schema';
 import type { BeheerDefinitie } from './types';
 
@@ -192,7 +192,7 @@ export const vakantieSchema = z
   });
 
 export function Schoolvakanties({ magBewerken }: { magBewerken: boolean }) {
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const definitie = useMemo<BeheerDefinitie<Schoolvakantie, z.infer<typeof vakantieSchema>> | null>(
     () =>
       schooljaar
@@ -240,7 +240,7 @@ export function Schoolvakanties({ magBewerken }: { magBewerken: boolean }) {
   );
   return (
     <>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {definitie ? <BeheerScherm definitie={definitie} magBewerken={magBewerken} /> : null}
     </>
   );
@@ -310,7 +310,7 @@ export const staffelSchema = z
   });
 
 export function Staffels({ magBewerken }: { magBewerken: boolean }) {
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const definitie = useMemo<BeheerDefinitie<Staffel, z.infer<typeof staffelSchema>> | null>(
     () =>
       schooljaar
@@ -388,7 +388,7 @@ export function Staffels({ magBewerken }: { magBewerken: boolean }) {
   );
   return (
     <>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {definitie ? <BeheerScherm definitie={definitie} magBewerken={magBewerken} /> : null}
     </>
   );
@@ -406,7 +406,7 @@ export const opslagSchema = z.object({
 });
 
 export function Opslagfactoren({ magBewerken }: { magBewerken: boolean }) {
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const definitie = useMemo<BeheerDefinitie<Opslag, z.infer<typeof opslagSchema>> | null>(
     () =>
       schooljaar
@@ -479,7 +479,7 @@ export function Opslagfactoren({ magBewerken }: { magBewerken: boolean }) {
   );
   return (
     <>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {definitie ? <BeheerScherm definitie={definitie} magBewerken={magBewerken} /> : null}
     </>
   );

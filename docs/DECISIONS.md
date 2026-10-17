@@ -638,3 +638,45 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** `#/voorbeelden` toont alle componenten met fictieve gegevens, zonder inloggen, maar alleen als `import.meta.env.DEV` waar is. CI controleert dat de galerij niet in `dist/` staat.
 **Reden:** schermen bekijken en screenshotten zonder account en zonder echte gegevens, terwijl de productiebuild er geen extra ingang bij krijgt.
+
+## Interface — UI-2 Beheerschermen
+
+### 2026-10-17 · Bewerken in een zijpaneel
+
+**Keuze:** `BeheerScherm` opent toevoegen, bewerken en bekijken in het zijpaneel (de Dialoog uit UI-1). Opslaan en Annuleren staan onderaan, Verwijderen links. Het eerste veld krijgt de focus; na sluiten gaat de focus terug naar de knop van de rij. Na verwijderen gaat de focus naar de titel van het scherm, omdat die rij niet meer bestaat. Opslaan en verwijderen bevestigen met een toast; fouten blijven als Melding in het paneel staan.
+**Reden:** keuze van de eigenaar. De tabel en je plek erin blijven staan.
+
+### 2026-10-17 · Vragen bij niet-opgeslagen wijzigingen
+
+**Keuze:** sluit je een paneel met gewijzigde velden (Escape, ✕ of Annuleren), dan vraagt de app "Wijzigingen weggooien?". Als gewijzigd telt: de formulierwaarden wijken af van de waarden bij het openen. Bij alleen inzien vraagt de app niets.
+**Reden:** keuze van de eigenaar. Zo raak je niet per ongeluk invoer kwijt.
+
+### 2026-10-17 · Geen window.confirm meer
+
+**Keuze:** alle bevestigingen gebruiken de Bevestiging-dialoog: verwijderen in beheer, terugdraaien en definitief maken bij de MATT-import, en resetten bij Accounts. De dialoog zegt wat er gebeurt, en de focus start op Annuleren.
+**Reden:** toegankelijk, in de huisstijl en overal hetzelfde gedrag.
+
+### 2026-10-17 · Foutoverzicht in het paneel
+
+**Keuze:** bij een mislukte poging krijgt een samenvatting bovenaan het paneel de focus. Daarin staat elke fout met een knop die naar het veld springt (via `data-veld`). Een databasefout (`vertaalFout`) verschijnt op dezelfde plek. Het zijn knoppen, geen ankerlinks, omdat een `#` onder HashRouter een route wordt.
+**Reden:** WCAG 3.3.1 en 3.3.3. Na een mislukte poging zie je meteen wat er aan de hand is.
+
+### 2026-10-17 · Alleen inzien zichtbaar uitgelegd
+
+**Keuze:** zonder bewerkrecht staat er een melding: "Je kunt dit onderdeel inzien. Wijzigen kan een coördinator of manager." Die staat zowel boven de lijst als in het paneel. Alleen-lezen velden hebben een gestippelde rand en een zachte achtergrond.
+**Reden:** tijdens de rondgang leek alleen-lezen op een storing of een testmodus. De tekst klopt voor de enige situatie waarin dit voorkomt: de beheerder bij werk en toewijzingen (SPEC §6).
+
+### 2026-10-17 · Schooljaar onthouden tijdens het gebruik
+
+**Keuze:** `SchooljaarProvider` onthoudt het gekozen schooljaar in het geheugen, voor alle pagina's. Na herladen of opnieuw inloggen start je weer bij het huidige schooljaar. Er komt niets in `localStorage` of `sessionStorage`. De kiezer staat op elke pagina die een schooljaar gebruikt, bij de gegevens die hij filtert, en niet in de kop.
+**Reden:** keuze van de eigenaar (onthouden tijdens het gebruik). CLAUDE.md: `localStorage` alleen voor de sessie. De kiezer staat bij de gegevens, omdat een kiezer in de kop ook op pagina's zonder schooljaar zou staan en daar verwarrend is.
+
+### 2026-10-17 · Beheeronderdelen uit één bron
+
+**Keuze:** `src/beheer/onderdelen.ts` bevat per onderdeel de naam, groep, een uitleg van één regel en de rechten. Het beheeroverzicht (een kaart per groep), de routes, het kruimelpad (_Beheer › Scholen_) en de paginatitel lezen allemaal daaruit.
+**Reden:** menu, titel en rechten blijven zo vanzelf met elkaar in overeenstemming.
+
+### 2026-10-17 · Tabel: telling, lege staten en vaste kop
+
+**Keuze:** boven de tabel staat een telling ("12 scholen", bij zoeken "3 van 12 scholen", via een live-regio). Bij een lege lijst verschijnt een lege staat met de knop Toevoegen; als zoeken niets oplevert, verschijnt "Geen resultaten voor …" met de knop "Zoekterm wissen". Lange tabellen scrollen binnen een eigen vak, waarin de kop blijft staan. Een rij opent alleen via de knop Bewerken of Bekijken, niet met een klik op de rij.
+**Reden:** keuze van de eigenaar (alleen via de knop): één duidelijke manier om te openen, en op een tablet open je niets per ongeluk tijdens het scrollen.

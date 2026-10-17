@@ -1,6 +1,10 @@
 // Componentengalerij (alleen in development, #/voorbeelden). Uitsluitend fictieve gegevens.
 // Bedoeld om componenten en tokens te bekijken en te screenshotten zonder in te loggen.
 import { useState } from 'react';
+import { z } from 'zod';
+import { BeheerScherm } from '../beheer/BeheerScherm';
+import { v } from '../beheer/schema';
+import type { BeheerDefinitie } from '../beheer/types';
 import { rechtenVoor } from '../auth/rechten';
 import { useBevestig } from '../components/ui/Bevestiging';
 import { Dialoog } from '../components/ui/Dialoog';
@@ -49,6 +53,7 @@ export default function Galerij() {
         <Tabel />
         <Overlays />
         <Formulier />
+        <Beheer />
       </div>
     </Indeling>
   );
@@ -332,6 +337,75 @@ function Formulier() {
           <Knop variant="secundair">Annuleren</Knop>
         </div>
       </form>
+    </section>
+  );
+}
+
+interface School {
+  id: string;
+  naam: string;
+  plaats: string;
+  leerlingen: number;
+}
+
+const SCHOLEN: School[] = [
+  { id: 's1', naam: 'De Regenboog', plaats: 'Harderwijk', leerlingen: 212 },
+  { id: 's2', naam: 'Het Kompas', plaats: 'Ermelo', leerlingen: 168 },
+  { id: 's3', naam: 'De Klimboom', plaats: 'Putten', leerlingen: 305 },
+];
+
+const schoolSchema = z.object({
+  naam: v.tekst(100),
+  plaats: v.tekst(100),
+  leerlingen: v.getal({ min: 0 }),
+});
+
+const schoolDefinitie: BeheerDefinitie<School, z.infer<typeof schoolSchema>> = {
+  titel: 'Scholen (voorbeeld)',
+  enkelvoud: 'school',
+  queryKey: ['galerij', 'scholen'],
+  laad: () => Promise.resolve(SCHOLEN),
+  sleutel: (r) => r.id,
+  rijNaam: (r) => r.naam,
+  kolommen: [
+    { kop: 'Naam', waarde: (r) => r.naam, sorteer: (r) => r.naam },
+    { kop: 'Plaats', waarde: (r) => r.plaats, sorteer: (r) => r.plaats },
+    {
+      kop: 'Leerlingen',
+      waarde: (r) => String(r.leerlingen),
+      sorteer: (r) => r.leerlingen,
+      numeriek: true,
+    },
+  ],
+  velden: [
+    { naam: 'naam', label: 'Naam', type: 'tekst', verplicht: true },
+    { naam: 'plaats', label: 'Plaats', type: 'tekst', verplicht: true },
+    { naam: 'leerlingen', label: 'Aantal leerlingen', type: 'getal', verplicht: true },
+  ],
+  schema: schoolSchema,
+  leeg: () => ({ naam: '', plaats: '', leerlingen: '' }),
+  naarFormulier: (r) => ({ naam: r.naam, plaats: r.plaats, leerlingen: String(r.leerlingen) }),
+  // Galerij: er wordt niets opgeslagen.
+  opslaan: () => Promise.resolve(),
+  verwijder: () => Promise.resolve(),
+};
+
+function Beheer() {
+  const [bewerken, setBewerken] = useState(true);
+  return (
+    <section aria-labelledby="g-beheer">
+      <h3 id="g-beheer">Beheerscherm</h3>
+      <label className="veld-vinkje">
+        <input
+          type="checkbox"
+          checked={bewerken}
+          onChange={(e) => {
+            setBewerken(e.target.checked);
+          }}
+        />
+        Mag bewerken
+      </label>
+      <BeheerScherm key={String(bewerken)} definitie={schoolDefinitie} magBewerken={bewerken} />
     </section>
   );
 }

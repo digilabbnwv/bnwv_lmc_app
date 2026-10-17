@@ -1,11 +1,18 @@
-// Generiek beheerscherm: overzicht (zoeken, sorteren) en een formulierpaneel voor
-// toevoegen, wijzigen en verwijderen. De database beslist over rechten en regels;
-// dit scherm valideert vooraf en vertaalt fouten.
-import { useEffect, useMemo, useRef, useState } from 'react';
+// Generiek beheerscherm: overzicht (zoeken, sorteren) en een zijpaneel voor toevoegen,
+// wijzigen, bekijken en verwijderen. De database beslist over rechten en regels; dit scherm
+// valideert vooraf en vertaalt fouten.
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBevestig } from '../components/ui/Bevestiging';
+import { Dialoog } from '../components/ui/Dialoog';
+import { LegeStaat } from '../components/ui/Kaart';
+import { Knop } from '../components/ui/Knop';
+import { Laden } from '../components/ui/Laden';
+import { Melding } from '../components/ui/Melding';
+import { useToast } from '../components/ui/Toasts';
 import { vertaalFout } from '../lib/fouten';
 import { foutenPerVeld, type Formulierwaarden } from './schema';
-import type { BeheerDefinitie } from './types';
+import type { BeheerDefinitie, Veld } from './types';
 import { VeldInvoer } from './Velden';
 
 interface Props<R, U> {
@@ -15,19 +22,36 @@ interface Props<R, U> {
 
 type Keuze<R> = { soort: 'nieuw' } | { soort: 'bestaand'; rij: R } | null;
 
+export const ALLEEN_INZIEN =
+  'Je kunt dit onderdeel inzien. Wijzigen kan een coördinator of manager.';
+
+/** "Scholen" → "scholen", maar "MATT-artikelcodes" blijft staan. */
+export function kleineBeginletter(tekst: string): string {
+  const tweede = tekst.charAt(1);
+  return tweede && tweede === tweede.toLowerCase()
+    ? tekst.charAt(0).toLowerCase() + tekst.slice(1)
+    : tekst;
+}
+
 export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
   const d = definitie;
   const queryClient = useQueryClient();
+  const bevestig = useBevestig();
+  const toon = useToast();
   const lijst = useQuery({ queryKey: d.queryKey, queryFn: d.laad });
   const [keuze, setKeuze] = useState<Keuze<R>>(null);
   const [waarden, setWaarden] = useState<Formulierwaarden>({});
+  const [begin, setBegin] = useState<Formulierwaarden>({});
   const [fouten, setFouten] = useState<Record<string, string>>({});
-  const [melding, setMelding] = useState<string | null>(null);
+  const [foutPoging, setFoutPoging] = useState(0);
   const [zoek, setZoek] = useState('');
   const [sortering, setSortering] = useState<{ kolom: number; oplopend: boolean } | null>(null);
-  const eersteVeld = useRef<HTMLElement | null>(null);
-  const terugFocus = useRef<string | null>(null);
-  const tabel = useRef<HTMLTableElement | null>(null);
+  const titel = useRef<HTMLHeadingElement>(null);
+  const zoekveld = useRef<HTMLInputElement>(null);
+  const overzicht = useRef<HTMLDivElement>(null);
+  const basis = useId();
+  const formId = `${basis}-formulier`;
+  const titelId = `${basis}-titel`;
 
   const vernieuw = async () => {
     await queryClient.invalidateQueries({ queryKey: d.queryKey });
@@ -39,12 +63,13 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
       await d.opslaan(uit, bestaand);
     },
     onSuccess: async (_, { bestaand }) => {
-      setMelding(`${bestaand ? 'Wijziging' : 'Nieuwe ' + d.enkelvoud} opgeslagen.`);
-      sluit();
+      toon(bestaand ? 'Wijziging opgeslagen.' : `Nieuwe ${d.enkelvoud} opgeslagen.`);
+      setKeuze(null);
       await vernieuw();
     },
     onError: (e) => {
       setFouten({ _: vertaalFout(e) });
+      setFoutPoging((n) => n + 1);
     },
   });
 
@@ -54,51 +79,61 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
       await d.verwijder(rij);
     },
     onSuccess: async (_, rij) => {
-      setMelding(`${d.rijNaam(rij)} is verwijderd.`);
-      terugFocus.current = null;
-      sluit();
+      toon(`${d.rijNaam(rij)} is verwijderd.`);
+      setKeuze(null);
       await vernieuw();
+      // De knop van de verwijderde rij bestaat niet meer: focus naar de titel.
+      titel.current?.focus();
     },
     onError: (e) => {
       setFouten({ _: vertaalFout(e) });
+      setFoutPoging((n) => n + 1);
     },
   });
 
-  function open(nieuweKeuze: Keuze<R>) {
-    setMelding(null);
+  // Na een mislukte poging: focus op het foutoverzicht (WCAG 3.3.1).
+  useEffect(() => {
+    if (foutPoging > 0) overzicht.current?.focus();
+  }, [foutPoging]);
+
+  function open(nieuweKeuze: Exclude<Keuze<R>, null>) {
+    const start = nieuweKeuze.soort === 'bestaand' ? d.naarFormulier(nieuweKeuze.rij) : d.leeg();
     setFouten({});
-    if (nieuweKeuze?.soort === 'bestaand') {
-      terugFocus.current = d.sleutel(nieuweKeuze.rij);
-      setWaarden(d.naarFormulier(nieuweKeuze.rij));
-    } else {
-      terugFocus.current = '__nieuw';
-      setWaarden(d.leeg());
-    }
+    setWaarden(start);
+    setBegin(start);
     setKeuze(nieuweKeuze);
   }
 
-  function sluit() {
+  const gewijzigd = magBewerken && JSON.stringify(waarden) !== JSON.stringify(begin);
+
+  async function probeerSluiten() {
+    if (
+      gewijzigd &&
+      !(await bevestig({
+        titel: 'Wijzigingen weggooien?',
+        tekst: 'Je hebt wijzigingen die nog niet zijn opgeslagen.',
+        bevestigTekst: 'Weggooien',
+      }))
+    ) {
+      return;
+    }
     setKeuze(null);
-    setFouten({});
   }
 
-  // Focus naar het eerste veld bij openen; terug naar de knop bij sluiten.
-  useEffect(() => {
-    if (keuze) {
-      eersteVeld.current?.focus();
-    } else if (terugFocus.current) {
-      const knop = tabel.current?.parentElement?.querySelector<HTMLElement>(
-        `[data-sleutel="${CSS.escape(terugFocus.current)}"]`,
-      );
-      knop?.focus();
-      terugFocus.current = null;
-    }
-  }, [keuze]);
+  async function vraagVerwijderen(rij: R) {
+    const ja = await bevestig({
+      titel: `${capitaal(d.enkelvoud)} verwijderen?`,
+      tekst: `${d.rijNaam(rij)} wordt verwijderd. Dit kun je niet ongedaan maken.`,
+      bevestigTekst: 'Verwijderen',
+    });
+    if (ja) verwijderen.mutate(rij);
+  }
 
   function verstuur() {
     const resultaat = d.schema.safeParse(waarden);
     if (!resultaat.success) {
       setFouten(foutenPerVeld(resultaat.error));
+      setFoutPoging((n) => n + 1);
       return;
     }
     setFouten({});
@@ -108,9 +143,10 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
     });
   }
 
+  const alle = useMemo(() => lijst.data ?? [], [lijst.data]);
+  const term = zoek.trim().toLowerCase();
   const rijen = useMemo(() => {
-    let r = lijst.data ?? [];
-    const term = zoek.trim().toLowerCase();
+    let r = alle;
     if (term) {
       r = r.filter((rij) =>
         d.kolommen.some((k) =>
@@ -136,20 +172,38 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
       }
     }
     return r;
-  }, [lijst.data, zoek, sortering, d.kolommen]);
+  }, [alle, term, sortering, d.kolommen]);
 
   const nieuw = keuze?.soort === 'nieuw';
   const zichtbareVelden = d.velden.filter((v) => !v.zichtbaar || v.zichtbaar(waarden));
+  const kanToevoegen = magBewerken && d.kanToevoegen !== false;
+  const meervoud = kleineBeginletter(d.titel);
+  const toevoegenKnop = kanToevoegen ? (
+    <Knop
+      onClick={() => {
+        open({ soort: 'nieuw' });
+      }}
+    >
+      {`${capitaal(d.enkelvoud)} toevoegen`}
+    </Knop>
+  ) : null;
+
+  const paneelTitel =
+    keuze === null ? '' : keuze.soort === 'nieuw' ? `Nieuwe ${d.enkelvoud}` : d.rijNaam(keuze.rij);
 
   return (
-    <section className="beheer" aria-labelledby={`${d.enkelvoud}-titel`}>
-      <h3 id={`${d.enkelvoud}-titel`}>{d.titel}</h3>
+    <section className="beheer" aria-labelledby={titelId}>
+      <h3 id={titelId} ref={titel} tabIndex={-1}>
+        {d.titel}
+      </h3>
       {d.omschrijving ? <div className="toelichting">{d.omschrijving}</div> : null}
+      {magBewerken ? null : <Melding titel="Alleen inzien">{ALLEEN_INZIEN}</Melding>}
 
       <div className="beheer-balk">
         <label>
           Zoeken
           <input
+            ref={zoekveld}
             type="search"
             value={zoek}
             onChange={(e) => {
@@ -157,92 +211,42 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
             }}
           />
         </label>
-        {magBewerken && d.kanToevoegen !== false ? (
-          <button
-            type="button"
-            data-sleutel="__nieuw"
-            onClick={() => {
-              open({ soort: 'nieuw' });
-            }}
-          >
-            {`${d.enkelvoud.charAt(0).toUpperCase()}${d.enkelvoud.slice(1)} toevoegen`}
-          </button>
+        {lijst.data ? (
+          <p className="beheer-telling gedempt" aria-live="polite">
+            {term
+              ? `${String(rijen.length)} van ${String(alle.length)} ${meervoud}`
+              : `${String(alle.length)} ${meervoud}`}
+          </p>
         ) : null}
+        {toevoegenKnop}
       </div>
 
-      <p className="melding-ok" role="status" aria-live="polite">
-        {melding ?? ''}
-      </p>
-
-      {keuze ? (
-        <form
-          className="kader beheer-formulier"
-          aria-label={nieuw ? `Nieuwe ${d.enkelvoud}` : `${d.enkelvoud} wijzigen`}
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (magBewerken) verstuur();
-          }}
-        >
-          <h4>{keuze.soort === 'nieuw' ? `Nieuwe ${d.enkelvoud}` : d.rijNaam(keuze.rij)}</h4>
-          {zichtbareVelden.map((veld, i) => {
-            const isEerste = i === 0;
-            return (
-              <VeldInvoer
-                key={veld.naam}
-                veld={magBewerken ? veld : { ...veld, alleenLezen: true }}
-                waarden={waarden}
-                fout={fouten[veld.naam]}
-                nieuw={nieuw}
-                onWijzig={(naam, w) => {
-                  setWaarden((huidig) => ({ ...huidig, [naam]: w }));
-                }}
-                {...(isEerste
-                  ? {
-                      eersteVeld: (el: HTMLElement | null) => {
-                        eersteVeld.current = el;
-                      },
-                    }
-                  : {})}
-              />
-            );
-          })}
-          <p className="melding" role="alert">
-            {fouten._ ??
-              (Object.keys(fouten).length > 0 ? 'Controleer de gemarkeerde velden.' : '')}
-          </p>
-          <div className="knoppen">
-            {magBewerken ? (
-              <button type="submit" disabled={opslaan.isPending}>
-                Opslaan
-              </button>
-            ) : null}
-            <button type="button" className="secundair" onClick={sluit}>
-              {magBewerken ? 'Annuleren' : 'Sluiten'}
-            </button>
-            {magBewerken && d.verwijder && keuze.soort === 'bestaand' ? (
-              <button
-                type="button"
-                className="secundair gevaar"
-                disabled={verwijderen.isPending}
-                onClick={() => {
-                  if (window.confirm(`${d.rijNaam(keuze.rij)} verwijderen?`)) {
-                    verwijderen.mutate(keuze.rij);
-                  }
-                }}
-              >
-                Verwijderen
-              </button>
-            ) : null}
-          </div>
-        </form>
+      {lijst.isPending ? <Laden /> : null}
+      {lijst.isError ? <Melding soort="fout">{vertaalFout(lijst.error)}</Melding> : null}
+      {lijst.data && alle.length === 0 ? (
+        <LegeStaat titel={`Nog geen ${meervoud}`} actie={toevoegenKnop}>
+          {kanToevoegen ? `Voeg de eerste ${d.enkelvoud} toe.` : null}
+        </LegeStaat>
       ) : null}
-
-      {lijst.isPending ? <p aria-busy="true">Bezig met laden…</p> : null}
-      {lijst.isError ? <p role="alert">{vertaalFout(lijst.error)}</p> : null}
-      {lijst.data ? (
-        <div className="tabel-schuif">
-          <table ref={tabel}>
+      {lijst.data && alle.length > 0 && rijen.length === 0 ? (
+        <LegeStaat
+          titel={`Geen resultaten voor "${zoek.trim()}"`}
+          actie={
+            <Knop
+              variant="secundair"
+              onClick={() => {
+                setZoek('');
+                zoekveld.current?.focus();
+              }}
+            >
+              Zoekterm wissen
+            </Knop>
+          }
+        />
+      ) : null}
+      {rijen.length > 0 ? (
+        <div className="tabel-schuif tabel-vast">
+          <table>
             <caption className="verborgen">{d.titel}</caption>
             <thead>
               <tr>
@@ -284,38 +288,141 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
               </tr>
             </thead>
             <tbody>
-              {rijen.length === 0 ? (
-                <tr>
-                  <td colSpan={d.kolommen.length + 1}>Geen gegevens.</td>
-                </tr>
-              ) : (
-                rijen.map((rij) => (
-                  <tr key={d.sleutel(rij)}>
-                    {d.kolommen.map((k) => (
-                      <td key={k.kop} className={k.numeriek ? 'numeriek' : undefined}>
-                        {k.waarde(rij)}
-                      </td>
-                    ))}
-                    <td>
-                      <button
-                        type="button"
-                        className="secundair"
-                        data-sleutel={d.sleutel(rij)}
-                        aria-label={`${magBewerken ? 'Bewerken' : 'Bekijken'}: ${d.rijNaam(rij)}`}
-                        onClick={() => {
-                          open({ soort: 'bestaand', rij });
-                        }}
-                      >
-                        {magBewerken ? 'Bewerken' : 'Bekijken'}
-                      </button>
+              {rijen.map((rij) => (
+                <tr key={d.sleutel(rij)}>
+                  {d.kolommen.map((k) => (
+                    <td key={k.kop} className={k.numeriek ? 'numeriek' : undefined}>
+                      {k.waarde(rij)}
                     </td>
-                  </tr>
-                ))
-              )}
+                  ))}
+                  <td className="actie">
+                    <Knop
+                      variant="secundair"
+                      aria-label={`${magBewerken ? 'Bewerken' : 'Bekijken'}: ${d.rijNaam(rij)}`}
+                      onClick={() => {
+                        open({ soort: 'bestaand', rij });
+                      }}
+                    >
+                      {magBewerken ? 'Bewerken' : 'Bekijken'}
+                    </Knop>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       ) : null}
+
+      <Dialoog
+        soort="zijpaneel"
+        open={keuze !== null}
+        titel={paneelTitel}
+        opSluiten={() => {
+          void probeerSluiten();
+        }}
+        acties={
+          <>
+            {magBewerken && d.verwijder && keuze?.soort === 'bestaand' ? (
+              <Knop
+                variant="secundair"
+                className="gevaar acties-links"
+                bezig={verwijderen.isPending}
+                onClick={() => {
+                  void vraagVerwijderen(keuze.rij);
+                }}
+              >
+                Verwijderen
+              </Knop>
+            ) : null}
+            <Knop
+              variant="secundair"
+              onClick={() => {
+                void probeerSluiten();
+              }}
+            >
+              {magBewerken ? 'Annuleren' : 'Sluiten'}
+            </Knop>
+            {magBewerken ? (
+              <Knop type="submit" form={formId} bezig={opslaan.isPending}>
+                Opslaan
+              </Knop>
+            ) : null}
+          </>
+        }
+      >
+        {magBewerken ? null : <Melding titel="Alleen inzien">{ALLEEN_INZIEN}</Melding>}
+        <Foutoverzicht ref={overzicht} fouten={fouten} velden={zichtbareVelden} formId={formId} />
+        <form
+          id={formId}
+          className="paneel-formulier"
+          aria-label={paneelTitel}
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (magBewerken) verstuur();
+          }}
+        >
+          {zichtbareVelden.map((veld, i) => (
+            <VeldInvoer
+              key={veld.naam}
+              veld={magBewerken ? veld : { ...veld, alleenLezen: true }}
+              waarden={waarden}
+              fout={fouten[veld.naam]}
+              nieuw={nieuw}
+              autofocus={i === 0}
+              onWijzig={(naam, w) => {
+                setWaarden((huidig) => ({ ...huidig, [naam]: w }));
+              }}
+            />
+          ))}
+        </form>
+      </Dialoog>
     </section>
+  );
+}
+
+function capitaal(tekst: string): string {
+  return tekst.charAt(0).toUpperCase() + tekst.slice(1);
+}
+
+interface FoutoverzichtProps {
+  ref: Ref<HTMLDivElement>;
+  fouten: Record<string, string>;
+  velden: Veld[];
+  formId: string;
+}
+
+/** Samenvatting van de fouten bovenaan het paneel, met knoppen die naar het veld springen. */
+function Foutoverzicht({ ref, fouten, velden, formId }: FoutoverzichtProps) {
+  const perVeld = velden.filter((v) => fouten[v.naam]);
+  const algemeen = fouten._;
+  return (
+    <div ref={ref} tabIndex={-1} className="foutoverzicht">
+      {algemeen || perVeld.length > 0 ? (
+        <Melding soort="fout" titel={algemeen ? 'Opslaan is niet gelukt' : 'Controleer de velden'}>
+          {algemeen ? <p>{algemeen}</p> : null}
+          {perVeld.length > 0 ? (
+            <ul className="foutoverzicht-lijst">
+              {perVeld.map((v) => (
+                <li key={v.naam}>
+                  <button
+                    type="button"
+                    className="foutoverzicht-link"
+                    onClick={() => {
+                      document
+                        .getElementById(formId)
+                        ?.querySelector<HTMLElement>(`[data-veld="${CSS.escape(v.naam)}"]`)
+                        ?.focus();
+                    }}
+                  >
+                    {v.label}: {fouten[v.naam]}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Melding>
+      ) : null}
+    </div>
   );
 }

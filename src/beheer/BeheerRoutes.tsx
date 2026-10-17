@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react';
 import { Link, Route, Routes } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { rechtenVoor } from '../auth/rechten';
+import { Kaart } from '../components/ui/Kaart';
+import { Kruimelpad } from '../components/ui/Kruimelpad';
 import {
   Artikelcodes,
   Feestdagen,
@@ -11,6 +14,7 @@ import {
   Staffels,
 } from './configuratie';
 import { MedewerkerDetail, Medewerkers } from './medewerkers';
+import { GROEPEN, ONDERDELEN } from './onderdelen';
 import { Toewijzingen } from './toewijzingen';
 import {
   Activiteiten,
@@ -21,177 +25,77 @@ import {
   Scholen,
 } from './werk';
 
-interface Onderdeel {
-  pad: string;
-  naam: string;
-  groep: 'Configuratie' | 'Medewerkers' | 'Werk' | 'Toewijzingen';
-  zichtbaar: boolean;
-  element: React.ReactNode;
-}
+/** Het scherm per onderdeel (zie onderdelen.ts voor naam, uitleg en rechten). */
+const SCHERMEN: Record<string, (magBewerken: boolean) => ReactNode> = {
+  schooljaren: (m) => <Schooljaren magBewerken={m} />,
+  schoolvakanties: (m) => <Schoolvakanties magBewerken={m} />,
+  feestdagen: (m) => <Feestdagen magBewerken={m} />,
+  staffel: (m) => <Staffels magBewerken={m} />,
+  opslagfactoren: (m) => <Opslagfactoren magBewerken={m} />,
+  instellingen: (m) => <Instellingen magBewerken={m} />,
+  artikelcodes: (m) => <Artikelcodes magBewerken={m} />,
+  medewerkers: (m) => <Medewerkers magBewerken={m} />,
+  scholen: (m) => <Scholen magBewerken={m} />,
+  leerlingen: (m) => <Leerlingen magBewerken={m} />,
+  activiteittypes: (m) => <Activiteittypes magBewerken={m} />,
+  activiteiten: (m) => <Activiteiten magBewerken={m} />,
+  projecten: (m) => <Projecten magBewerken={m} />,
+  'matt-projecten': (m) => <MattProjecten magBewerken={m} />,
+  toewijzingen: (m) => <Toewijzingen magBewerken={m} />,
+};
 
-/** Alle beheeronderdelen, met de rechten uit SPEC §6. */
-export function useOnderdelen(): Onderdeel[] {
+function useRechten() {
   const { rollen } = useAuth();
-  const r = rechtenVoor(rollen);
-  const c = r.configuratie;
-  const w = r.werkBeheren;
-  return [
-    {
-      pad: 'schooljaren',
-      naam: 'Schooljaren',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Schooljaren magBewerken={c} />,
-    },
-    {
-      pad: 'schoolvakanties',
-      naam: 'Schoolvakanties',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Schoolvakanties magBewerken={c} />,
-    },
-    {
-      pad: 'feestdagen',
-      naam: 'Feestdagen',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Feestdagen magBewerken={c} />,
-    },
-    {
-      pad: 'staffel',
-      naam: 'Staffel',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Staffels magBewerken={c} />,
-    },
-    {
-      pad: 'opslagfactoren',
-      naam: 'Opslagfactoren',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Opslagfactoren magBewerken={c} />,
-    },
-    {
-      pad: 'instellingen',
-      naam: 'Instellingen',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Instellingen magBewerken={c} />,
-    },
-    {
-      pad: 'artikelcodes',
-      naam: 'MATT-artikelcodes',
-      groep: 'Configuratie',
-      zichtbaar: c,
-      element: <Artikelcodes magBewerken={c} />,
-    },
-    {
-      pad: 'medewerkers',
-      naam: 'Medewerkers',
-      groep: 'Medewerkers',
-      zichtbaar: r.medewerkers,
-      element: <Medewerkers magBewerken={r.medewerkers} />,
-    },
-    {
-      pad: 'scholen',
-      naam: 'Scholen',
-      groep: 'Werk',
-      zichtbaar: r.werkInzien,
-      element: <Scholen magBewerken={w} />,
-    },
-    {
-      pad: 'leerlingen',
-      naam: 'Leerlingen per schooljaar',
-      groep: 'Werk',
-      zichtbaar: r.werkInzien,
-      element: <Leerlingen magBewerken={w} />,
-    },
-    {
-      pad: 'activiteittypes',
-      naam: 'Activiteittypes',
-      groep: 'Werk',
-      zichtbaar: r.werkInzien,
-      element: <Activiteittypes magBewerken={w} />,
-    },
-    {
-      pad: 'activiteiten',
-      naam: 'Activiteiten',
-      groep: 'Werk',
-      zichtbaar: r.werkInzien,
-      element: <Activiteiten magBewerken={w} />,
-    },
-    {
-      pad: 'projecten',
-      naam: 'Projecten',
-      groep: 'Werk',
-      zichtbaar: r.werkInzien,
-      element: <Projecten magBewerken={w} />,
-    },
-    {
-      pad: 'matt-projecten',
-      naam: 'MATT-projecten',
-      groep: 'Werk',
-      zichtbaar: r.mattProjecten,
-      element: <MattProjecten magBewerken={r.mattProjecten} />,
-    },
-    {
-      pad: 'toewijzingen',
-      naam: 'Toewijzingen',
-      groep: 'Toewijzingen',
-      zichtbaar: r.werkInzien,
-      element: <Toewijzingen magBewerken={w} />,
-    },
-  ];
+  return rechtenVoor(rollen);
 }
 
 function Overzicht() {
-  const onderdelen = useOnderdelen().filter((o) => o.zichtbaar);
-  const groepen = [...new Set(onderdelen.map((o) => o.groep))];
+  const r = useRechten();
+  const zichtbaar = ONDERDELEN.filter((o) => o.zichtbaar(r));
   return (
-    <nav aria-labelledby="beheer-titel">
+    <section aria-labelledby="beheer-titel">
       <h2 id="beheer-titel">Beheer</h2>
-      {groepen.map((g) => (
-        <section key={g} aria-label={g}>
-          <h3>{g}</h3>
-          <ul className="lijst">
-            {onderdelen
-              .filter((o) => o.groep === g)
-              .map((o) => (
-                <li key={o.pad}>
-                  <Link to={`/beheer/${o.pad}`}>{o.naam}</Link>
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
-    </nav>
+      <p className="gedempt">Kies wat je wilt inzien of bijwerken.</p>
+      <div className="beheer-groepen">
+        {GROEPEN.filter((g) => zichtbaar.some((o) => o.groep === g)).map((g) => (
+          <Kaart key={g} titel={g}>
+            <ul className="beheer-onderdelen">
+              {zichtbaar
+                .filter((o) => o.groep === g)
+                .map((o) => (
+                  <li key={o.pad}>
+                    <Link to={`/beheer/${o.pad}`}>
+                      <span className="beheer-onderdeel-naam">{o.naam}</span>
+                      <span className="beheer-onderdeel-uitleg">{o.omschrijving}</span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </Kaart>
+        ))}
+      </div>
+    </section>
   );
 }
 
 export default function BeheerRoutes() {
-  const onderdelen = useOnderdelen();
-  const { rollen } = useAuth();
-  const r = rechtenVoor(rollen);
+  const r = useRechten();
   return (
     <Routes>
       <Route index element={<Overzicht />} />
-      {onderdelen
-        .filter((o) => o.zichtbaar)
-        .map((o) => (
-          <Route
-            key={o.pad}
-            path={o.pad}
-            element={
-              <>
-                <p>
-                  <Link to="/beheer">← Beheer</Link>
-                </p>
-                <h2>{o.naam}</h2>
-                {o.element}
-              </>
-            }
-          />
-        ))}
+      {ONDERDELEN.filter((o) => o.zichtbaar(r)).map((o) => (
+        <Route
+          key={o.pad}
+          path={o.pad}
+          element={
+            <>
+              <Kruimelpad kruimels={[{ label: 'Beheer', pad: '/beheer' }, { label: o.naam }]} />
+              <h2>{o.naam}</h2>
+              {SCHERMEN[o.pad]?.(o.magBewerken(r))}
+            </>
+          }
+        />
+      ))}
       {r.medewerkers ? (
         <Route path="medewerkers/:id" element={<MedewerkerDetail magBewerken={r.medewerkers} />} />
       ) : null}

@@ -8,7 +8,8 @@ interface Props {
   fout: string | undefined;
   nieuw: boolean;
   onWijzig: (naam: string, waarde: string | boolean) => void;
-  eersteVeld?: (el: HTMLElement | null) => void;
+  /** Krijgt de focus als het paneel opent. */
+  autofocus?: boolean;
 }
 
 function isAlleenLezen(veld: Veld, waarden: Formulierwaarden, nieuw: boolean): boolean {
@@ -20,12 +21,14 @@ function isAlleenLezen(veld: Veld, waarden: Formulierwaarden, nieuw: boolean): b
 /** Lijst van datums (komma-gescheiden ISO in de formulierwaarde). */
 function Datumlijst({
   id,
+  veldNaam,
   waarde,
   alleenLezen,
   beschrijving,
   onWijzig,
 }: {
   id: string;
+  veldNaam: string;
   waarde: string;
   alleenLezen: boolean;
   beschrijving: string | undefined;
@@ -39,6 +42,8 @@ function Datumlijst({
     <div
       className="datumlijst"
       role="group"
+      tabIndex={-1}
+      data-veld={veldNaam}
       aria-labelledby={`${id}-label`}
       aria-describedby={beschrijving}
     >
@@ -81,7 +86,7 @@ function Datumlijst({
   );
 }
 
-export function VeldInvoer({ veld, waarden, fout, nieuw, onWijzig, eersteVeld }: Props) {
+export function VeldInvoer({ veld, waarden, fout, nieuw, onWijzig, autofocus = false }: Props) {
   const id = useId();
   const foutId = `${id}-fout`;
   const hulpId = `${id}-hulp`;
@@ -94,7 +99,9 @@ export function VeldInvoer({ veld, waarden, fout, nieuw, onWijzig, eersteVeld }:
     'aria-invalid': fout ? true : undefined,
     'aria-describedby': beschrijving,
     'aria-required': veld.verplicht ? true : undefined,
-    ref: eersteVeld,
+    // Voor het foutoverzicht (springen naar het veld) en de focus bij openen.
+    'data-veld': veld.naam,
+    'data-autofocus': autofocus || undefined,
   } as const;
 
   let invoer;
@@ -158,6 +165,7 @@ export function VeldInvoer({ veld, waarden, fout, nieuw, onWijzig, eersteVeld }:
           </span>
           <Datumlijst
             id={id}
+            veldNaam={veld.naam}
             waarde={typeof waarde === 'string' ? waarde : ''}
             alleenLezen={alleenLezen}
             beschrijving={beschrijving}

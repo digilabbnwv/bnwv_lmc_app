@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { AuthPoort } from './auth/AuthPoort';
+import { SchooljaarProvider } from './beheer/SchooljaarKiezer';
 import { useAuth } from './auth/AuthContext';
 import { rechtenVoor } from './auth/rechten';
 import { Doelbinding } from './components/Doelbinding';
@@ -29,31 +30,33 @@ function Inhoud() {
   const { rollen, gebruiker, uitloggen } = useAuth();
   const rechten = rechtenVoor(rollen);
   return (
-    <Indeling
-      rechten={rechten}
-      email={gebruiker?.email ?? null}
-      uitloggen={() => {
-        void uitloggen();
-      }}
-    >
-      <Suspense fallback={<Laden />}>
-        <Routes>
-          {/* Startpagina: C/M/B het teamoverzicht, een lmc de eigen belasting. */}
-          <Route path="/" element={rechten.werkInzien ? <Teamoverzicht /> : <MijnBelasting />} />
-          <Route path="/mijn-belasting" element={<MijnBelasting />} />
-          {rechten.werkInzien ? <Route path="/team" element={<Teamoverzicht />} /> : null}
-          <Route path="/gepland-gerealiseerd" element={<GeplandGerealiseerd />} />
-          <Route path="/gepland-gerealiseerd/:medewerkerId" element={<GeplandGerealiseerd />} />
-          <Route path="/over" element={<OverDeApp />} />
-          <Route path="/beveiliging" element={<Beveiliging />} />
-          {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
-          {rechten.accounts ? <Route path="/accounts" element={<Accounts />} /> : null}
-          {rechten.beheer ? <Route path="/beheer/*" element={<BeheerRoutes />} /> : null}
-          {rechten.importeren ? <Route path="/import" element={<MattImport />} /> : null}
-          <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
-        </Routes>
-      </Suspense>
-    </Indeling>
+    <SchooljaarProvider>
+      <Indeling
+        rechten={rechten}
+        email={gebruiker?.email ?? null}
+        uitloggen={() => {
+          void uitloggen();
+        }}
+      >
+        <Suspense fallback={<Laden />}>
+          <Routes>
+            {/* Startpagina: C/M/B het teamoverzicht, een lmc de eigen belasting. */}
+            <Route path="/" element={rechten.werkInzien ? <Teamoverzicht /> : <MijnBelasting />} />
+            <Route path="/mijn-belasting" element={<MijnBelasting />} />
+            {rechten.werkInzien ? <Route path="/team" element={<Teamoverzicht />} /> : null}
+            <Route path="/gepland-gerealiseerd" element={<GeplandGerealiseerd />} />
+            <Route path="/gepland-gerealiseerd/:medewerkerId" element={<GeplandGerealiseerd />} />
+            <Route path="/over" element={<OverDeApp />} />
+            <Route path="/beveiliging" element={<Beveiliging />} />
+            {/* De frontend verbergt alleen; de database en de Edge Functions beslissen. */}
+            {rechten.accounts ? <Route path="/accounts" element={<Accounts />} /> : null}
+            {rechten.beheer ? <Route path="/beheer/*" element={<BeheerRoutes />} /> : null}
+            {rechten.importeren ? <Route path="/import" element={<MattImport />} /> : null}
+            <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
+          </Routes>
+        </Suspense>
+      </Indeling>
+    </SchooljaarProvider>
   );
 }
 

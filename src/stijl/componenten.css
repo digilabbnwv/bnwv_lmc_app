@@ -171,9 +171,9 @@ dialog.dialoog::backdrop {
 
 /* Zijpaneel: rechts, volle hoogte; op tablet over de volle breedte */
 dialog.dialoog.zijpaneel {
-  width: min(36rem, 100vw);
+  width: min(36rem, 100%);
   height: 100vh;
-  max-width: 100vw;
+  max-width: 100%;
   max-height: 100vh;
   margin: 0 0 0 auto;
   border-radius: 0;
@@ -202,7 +202,7 @@ dialog.zijpaneel .dialoog-acties {
 
 @media (max-width: 48rem) {
   dialog.dialoog.zijpaneel {
-    width: 100vw;
+    width: 100%;
     border-width: 0;
   }
 }
@@ -327,4 +327,159 @@ dialog.zijpaneel .dialoog-acties {
   height: 3rem;
   border: 1px solid var(--rand);
   border-radius: var(--rond);
+}
+
+/* Beheerschermen (UI-2) */
+.beheer-telling {
+  margin: 0;
+  align-self: center;
+}
+
+.beheer-balk > :last-child:is(button) {
+  margin-left: auto;
+}
+
+/* Lange tabellen: kop blijft staan bij scrollen */
+.tabel-vast {
+  max-height: min(70vh, 48rem);
+  overflow: auto;
+}
+
+.tabel-vast thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+td.actie {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+td.actie button {
+  min-height: 2.25rem;
+  padding-block: var(--ruimte-1);
+}
+
+.dialoog-acties .acties-links {
+  margin-right: auto;
+}
+
+form.paneel-formulier {
+  max-width: none;
+}
+
+.foutoverzicht:focus {
+  outline: none;
+}
+
+.foutoverzicht:focus-visible .meldingblok,
+.foutoverzicht:focus .meldingblok {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.foutoverzicht-lijst {
+  margin: var(--ruimte-2) 0 0;
+  padding-left: 1.25rem;
+}
+
+button.foutoverzicht-link {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tekst);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: underline;
+}
+
+button.foutoverzicht-link:hover:not(:disabled) {
+  filter: none;
+  text-decoration-thickness: 2px;
+}
+
+/* Alleen-lezen velden: zichtbaar anders dan invulbare velden */
+input:read-only:not([type='checkbox'], [type='radio']),
+textarea:read-only,
+select:disabled {
+  background: var(--oppervlak-zacht);
+  border-style: dashed;
+  opacity: 1;
+  color: var(--tekst);
+}
+
+/* Kruimelpad */
+.kruimelpad ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-1);
+  margin: 0 0 var(--ruimte-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--tekst-klein);
+  color: var(--gedempt);
+}
+
+.kruimelpad li + li::before {
+  content: '›';
+  margin-right: var(--ruimte-1);
+  color: var(--gedempt);
+}
+
+.kruimelpad a {
+  color: var(--gedempt);
+}
+
+.kruimelpad [aria-current='page'] {
+  color: var(--tekst);
+  font-weight: 600;
+}
+
+/* Beheeroverzicht: een kaart per groep */
+.beheer-groepen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: var(--ruimte-4);
+  align-items: start;
+}
+
+.beheer-onderdelen {
+  display: grid;
+  gap: var(--ruimte-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beheer-onderdelen a {
+  display: grid;
+  gap: 0.1rem;
+  padding: var(--ruimte-2) var(--ruimte-3);
+  margin: 0 calc(-1 * var(--ruimte-3));
+  border-radius: var(--rond-klein);
+  text-decoration: none;
+}
+
+.beheer-onderdelen a:hover {
+  background: var(--oppervlak-zacht);
+}
+
+.beheer-onderdeel-naam {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+.beheer-onderdeel-uitleg {
+  font-size: var(--tekst-klein);
+  color: var(--gedempt);
+}
+
+/* Label met verplicht-sterretje op één regel */
+label.veld-label {
+  display: block;
 }
