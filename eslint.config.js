@@ -5,7 +5,16 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   // Edge Functions en de e2e-test draaien op Deno en worden met `deno lint` gecontroleerd.
-  { ignores: ['dist', 'coverage', 'supabase/functions', 'e2e', 'src/lib/database.types.ts'] },
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'node_bin',
+      'supabase/functions',
+      'e2e',
+      'src/lib/database.types.ts',
+    ],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],

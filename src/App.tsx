@@ -1,9 +1,14 @@
 import { lazy, Suspense } from 'react';
-import { NavLink, Route, Routes } from 'react-router';
+import { Route, Routes, useLocation } from 'react-router';
 import { AuthPoort } from './auth/AuthPoort';
 import { useAuth } from './auth/AuthContext';
 import { rechtenVoor } from './auth/rechten';
 import { Doelbinding } from './components/Doelbinding';
+import { BevestigingProvider } from './components/ui/Bevestiging';
+import { Laden } from './components/ui/Laden';
+import { ToastProvider } from './components/ui/Toasts';
+import { Indeling } from './indeling/Indeling';
+import { APP_NAAM } from './indeling/navigatie';
 import { Beveiliging } from './pages/Beveiliging';
 import { GeplandGerealiseerd } from './weergaven/GeplandGerealiseerd';
 import { MijnBelasting } from './weergaven/MijnBelasting';
@@ -17,67 +22,21 @@ const MattImport = lazy(() =>
 );
 const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.Accounts })));
 
-function Navigatie() {
-  const { rollen, uitloggen } = useAuth();
-  const rechten = rechtenVoor(rollen);
-  return (
-    <nav aria-label="Hoofdmenu">
-      <ul>
-        <li>
-          <NavLink to="/mijn-belasting">Mijn belasting</NavLink>
-        </li>
-        {rechten.werkInzien ? (
-          <li>
-            <NavLink to="/team">Teamoverzicht</NavLink>
-          </li>
-        ) : null}
-        <li>
-          <NavLink to="/gepland-gerealiseerd">Gepland en gerealiseerd</NavLink>
-        </li>
-        {rechten.beheer ? (
-          <li>
-            <NavLink to="/beheer">Beheer</NavLink>
-          </li>
-        ) : null}
-        {rechten.importeren ? (
-          <li>
-            <NavLink to="/import">MATT-import</NavLink>
-          </li>
-        ) : null}
-        {rechten.accounts ? (
-          <li>
-            <NavLink to="/accounts">Accounts</NavLink>
-          </li>
-        ) : null}
-        <li>
-          <NavLink to="/beveiliging">Beveiliging</NavLink>
-        </li>
-        <li>
-          <NavLink to="/over">Over deze app</NavLink>
-        </li>
-        <li>
-          <button
-            type="button"
-            className="secundair"
-            onClick={() => {
-              void uitloggen();
-            }}
-          >
-            Uitloggen
-          </button>
-        </li>
-      </ul>
-    </nav>
-  );
-}
+// Componentengalerij met fictieve data: alleen in development, valt weg uit de productiebuild.
+const Galerij = import.meta.env.DEV ? lazy(() => import('./voorbeelden/Galerij')) : null;
 
 function Inhoud() {
-  const { rollen } = useAuth();
+  const { rollen, gebruiker, uitloggen } = useAuth();
   const rechten = rechtenVoor(rollen);
   return (
-    <>
-      <Navigatie />
-      <Suspense fallback={<p aria-busy="true">Bezig met laden…</p>}>
+    <Indeling
+      rechten={rechten}
+      email={gebruiker?.email ?? null}
+      uitloggen={() => {
+        void uitloggen();
+      }}
+    >
+      <Suspense fallback={<Laden />}>
         <Routes>
           {/* Startpagina: C/M/B het teamoverzicht, een lmc de eigen belasting. */}
           <Route path="/" element={rechten.werkInzien ? <Teamoverzicht /> : <MijnBelasting />} />
@@ -94,24 +53,44 @@ function Inhoud() {
           <Route path="*" element={<p>Deze pagina bestaat niet.</p>} />
         </Routes>
       </Suspense>
-    </>
+    </Indeling>
   );
 }
 
 export function App() {
+  const { pathname } = useLocation();
   return (
-    <div className="app">
-      <header className="app-kop">
-        <h1>LMC-capaciteit</h1>
-      </header>
-      <main className="app-inhoud">
-        <AuthPoort>
-          <Inhoud />
-        </AuthPoort>
-      </main>
-      <footer className="app-voet">
-        <Doelbinding />
-      </footer>
-    </div>
+    <ToastProvider>
+      <BevestigingProvider>
+        <div className="app">
+          {/* Geen gewone ankerlink: met HashRouter zou #inhoud een route worden. */}
+          <a
+            className="naar-inhoud"
+            href="#inhoud"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById('inhoud')?.focus();
+            }}
+          >
+            Naar de inhoud
+          </a>
+          <header className="app-kop">
+            <h1>{APP_NAAM}</h1>
+          </header>
+          {Galerij && pathname === '/voorbeelden' ? (
+            <Suspense fallback={<Laden />}>
+              <Galerij />
+            </Suspense>
+          ) : (
+            <AuthPoort>
+              <Inhoud />
+            </AuthPoort>
+          )}
+          <footer className="app-voet">
+            <Doelbinding />
+          </footer>
+        </div>
+      </BevestigingProvider>
+    </ToastProvider>
   );
 }

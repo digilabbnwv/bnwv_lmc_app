@@ -5,6 +5,28 @@ import { describe, expect, it } from 'vitest';
 
 const src = join(import.meta.dirname, 'src');
 
+/** Het enige toegestane oranje: het merkoranje uit de huisstijlgids, alleen als accent. */
+const MERK_ORANJE = '#ec7404';
+
+/** Verzadigde tinten in het rode, oranje of groene bereik (grijs en beige mogen). */
+function beoordelendeTint(hex: string): boolean {
+  const h = hex.length === 4 ? hex.slice(1).replace(/./g, (c) => c + c) : hex.slice(1);
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [
+    number,
+    number,
+    number,
+  ];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const verzadiging = max === 0 ? 0 : (max - min) / max;
+  if (verzadiging < 0.35 || max < 0.25) return false;
+  let tint: number;
+  if (max === r) tint = (60 * ((g - b) / (max - min)) + 360) % 360;
+  else if (max === g) tint = 60 * ((b - r) / (max - min)) + 120;
+  else tint = 60 * ((r - g) / (max - min)) + 240;
+  return tint < 50 || tint > 330 || (tint > 70 && tint < 170);
+}
+
 function bestanden(map: string): string[] {
   return readdirSync(map).flatMap((f) => {
     const p = join(map, f);
@@ -16,6 +38,12 @@ function bestanden(map: string): string[] {
 }
 
 describe('doelbinding in de UI (SPEC §1)', () => {
+  const cssBestanden = bestanden(src).filter((f) => f.endsWith('.css'));
+
+  it('controleert alle stijlbestanden', () => {
+    expect(cssBestanden.length).toBeGreaterThanOrEqual(5);
+  });
+
   it('geen beoordelende woorden in teksten', () => {
     const verboden =
       /achterstand|te weinig|onvoldoende|ondermaats|slecht gepresteerd|tekortschiet/i;
@@ -23,8 +51,25 @@ describe('doelbinding in de UI (SPEC §1)', () => {
   });
 
   it('geen rood, oranje of groen in de stijlen', () => {
-    const css = readFileSync(join(src, 'stijl.css'), 'utf8');
-    expect(css).not.toMatch(/\b(red|green|orange)\b|#(f00|ff0000|0f0|00ff00|ffa500)\b/i);
+    for (const f of cssBestanden) {
+      const css = readFileSync(f, 'utf8');
+      expect(css, f).not.toMatch(/\b(red|green|orange)\b/i);
+      for (const [hex] of css.matchAll(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi)) {
+        if (hex.toLowerCase() === MERK_ORANJE && f.endsWith('tokens.css')) continue;
+        expect(beoordelendeTint(hex), `${hex} in ${f}`).toBe(false);
+      }
+    }
+  });
+
+  it('het merkoranje staat alleen als token en alleen in kop en navigatie', () => {
+    for (const f of cssBestanden) {
+      const css = readFileSync(f, 'utf8');
+      if (!f.endsWith('tokens.css')) expect(css.toLowerCase(), f).not.toContain(MERK_ORANJE);
+      for (const m of css.matchAll(/([^{}]+)\{[^{}]*var\(--merk-oranje\)[^{}]*\}/g)) {
+        const selectors = (m[1] as string).replace(/\/\*[\s\S]*?\*\//g, '').split(',');
+        for (const sel of selectors) expect(sel.trim(), f).toMatch(/^\.(app-kop|navigatie)\b/);
+      }
+    }
   });
 
   it('de doelbindingstekst staat letterlijk in de app', () => {

@@ -1,0 +1,95 @@
+/*
+ * Design tokens, afgeleid van de huisstijlgids van Bibliotheek Noordwest Veluwe (v1.0, april 2026).
+ * Basiskleuren: wit, antraciet, oranje en beige. Antraciet is de hoofdkleur voor tekst en knoppen;
+ * oranje haalt op wit geen 4,5:1 en is daarom alleen een merkaccent (kop en navigatie), nooit
+ * tekst, knop, zone of cijfer (doelbinding, SPEC §1). Contrast: zie contrast.test.ts.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Huisstijl */
+  --merk-oranje: #ec7404;
+  --merk-antraciet: #39373a;
+  --merk-beige: #fde5d0;
+
+  /* Kleurrollen (licht) */
+  --achtergrond: #ffffff;
+  --oppervlak: #ffffff;
+  --oppervlak-zacht: #f7f4f1;
+  --markering: #fde5d0;
+  --tekst: #39373a;
+  --gedempt: #5e5a60;
+  --rand: #e2ddd8;
+  --rand-sterk: #8a8580;
+  --knop-achtergrond: #39373a;
+  --knop-tekst: #ffffff;
+  --focus: #39373a;
+  --schaduw: 0 1px 2px rgb(57 55 58 / 0.08), 0 4px 12px rgb(57 55 58 / 0.08);
+  --schaduw-groot: 0 8px 32px rgb(57 55 58 / 0.2);
+  --overlay: rgb(57 55 58 / 0.45);
+
+  /* Zones: alleen grijstinten en arcering (SPEC §1) */
+  --zone-vulling: #8a8580;
+  --zone-vol: #5e5a60;
+  --zone-boven-a: #39373a;
+  --zone-boven-b: #8a8580;
+
+  /* Typografie: Plus Jakarta Sans, met Arial als fallback (huisstijlgids §4.4) */
+  --lettertype: 'Plus Jakarta Sans', Arial, sans-serif;
+  --tekst-klein: 0.875rem;
+  --tekst-basis: 1rem;
+  --tekst-groot: 1.125rem;
+  --kop-3: 1.125rem;
+  --kop-2: 1.5rem;
+  --kop-1: 1.75rem;
+  --regel-tekst: 1.5;
+  --regel-kop: 1.2;
+
+  /* Ruimte, vormen en maten */
+  --ruimte-1: 0.25rem;
+  --ruimte-2: 0.5rem;
+  --ruimte-3: 0.75rem;
+  --ruimte-4: 1rem;
+  --ruimte-5: 1.5rem;
+  --ruimte-6: 2rem;
+  --ruimte-7: 3rem;
+  --rond-klein: 0.375rem;
+  --rond: 0.5rem;
+  --rond-groot: 0.75rem;
+  /* Minimale grootte van aanraakdoelen (WCAG 2.5.5, tablet) */
+  --aanraak: 2.75rem;
+  --navigatie-breedte: 16rem;
+  --inhoud-max: 80rem;
+  --duur: 150ms;
+}
+
+/* Donkere modus volgt de instelling van het apparaat. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --achtergrond: #1c1b1d;
+    --oppervlak: #262427;
+    --oppervlak-zacht: #211f22;
+    --markering: #45392f;
+    --tekst: #f5f2ef;
+    --gedempt: #bdb7b2;
+    --rand: #3d3a3e;
+    --rand-sterk: #85808a;
+    --knop-achtergrond: #fde5d0;
+    --knop-tekst: #39373a;
+    --focus: #fde5d0;
+    --schaduw: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+    --schaduw-groot: 0 8px 32px rgb(0 0 0 / 0.6);
+    --overlay: rgb(0 0 0 / 0.6);
+
+    --zone-vulling: #8a8580;
+    --zone-vol: #cfc9c4;
+    --zone-boven-a: #f5f2ef;
+    --zone-boven-b: #85808a;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duur: 0ms;
+  }
+}
