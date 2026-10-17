@@ -1,13 +1,12 @@
 // Gepland versus gerealiseerd (SPEC §9), per medewerker en schooljaar: per categorie,
 // per werkpakket, niet-gekoppelde uren apart, en "tot vandaag". Neutraal: een verschil
 // is geen beoordeling.
-import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { rechtenVoor } from '../auth/rechten';
 import { naamVan, useMedewerkers } from '../beheer/data';
-import { SchooljaarKiezer } from '../beheer/SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from '../beheer/SchooljaarKiezer';
 import { formatUren } from '../lib/opmaak';
 import { haalVergelijking } from './data';
 import { nietGekoppeld, perCategorie, perWerkpakket, verschil, type Totaal } from './logica';
@@ -78,7 +77,7 @@ export function GeplandGerealiseerd() {
   const { medewerkerId: gekozen } = useParams();
   const navigate = useNavigate();
   const rechten = rechtenVoor(rollen);
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const medewerkers = useMedewerkers();
   // Een lmc ziet altijd alleen zichzelf (RLS dwingt dat ook af).
   const medewerker = rechten.werkInzien ? (gekozen ?? eigenId) : eigenId;
@@ -101,7 +100,7 @@ export function GeplandGerealiseerd() {
         geboekt.
       </p>
       <div className="filters">
-        <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+        <SchooljaarKiezer />
         {rechten.werkInzien ? (
           <label className="veld">
             <span className="veld-label">Medewerker</span>

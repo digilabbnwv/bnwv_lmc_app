@@ -49,7 +49,7 @@ describe('Indeling', () => {
   it('zet document.title per pagina', async () => {
     toon(['manager'], '/beheer/scholen');
     await waitFor(() => {
-      expect(document.title).toBe('Beheer · LMC-capaciteit');
+      expect(document.title).toBe('Scholen · LMC-capaciteit');
     });
   });
 

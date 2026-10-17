@@ -1,6 +1,7 @@
 // Hoofdmenu en paginatitels. Eén bron, zodat menu, document.title en tests overeenkomen.
 // De frontend verbergt alleen; de database beslist (RLS).
 import type { Rechten } from '../auth/rechten';
+import { onderdeelBij } from '../beheer/onderdelen';
 
 export const APP_NAAM = 'LMC-capaciteit';
 
@@ -50,9 +51,13 @@ export function zichtbareGroepen(r: Rechten): NavGroep[] {
   );
 }
 
-/** Titel van de pagina bij een pad (ook voor onderliggende paden, zoals /beheer/scholen). */
+/** Titel van de pagina bij een pad; onder /beheer de naam van het onderdeel. */
 export function paginaTitel(pad: string, r: Rechten): string {
   if (pad === '/') return r.werkInzien ? 'Teamoverzicht' : 'Mijn belasting';
+  if (r.beheer && pad.startsWith('/beheer/')) {
+    const onderdeel = onderdeelBij(pad.slice('/beheer/'.length), r);
+    if (onderdeel) return onderdeel.naam;
+  }
   for (const groep of zichtbareGroepen(r)) {
     for (const item of groep.items) {
       if (pad === item.pad || pad.startsWith(`${item.pad}/`)) return item.titel;

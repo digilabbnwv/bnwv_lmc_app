@@ -1,11 +1,10 @@
 // Mijn belasting (SPEC §9): inzetbaar, gepland en gerealiseerd voor het gekozen
 // schooljaar, de belastingsgraad met zone, en de toewijzingen.
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { BRONNAAM, ophalen, useWerkpakketten, VERDELINGNAAM } from '../beheer/data';
-import { SchooljaarKiezer } from '../beheer/SchooljaarKiezer';
+import { SchooljaarKiezer, useSchooljaarKeuze } from '../beheer/SchooljaarKiezer';
 import { formatDatum, formatUren } from '../lib/opmaak';
 import { supabase } from '../lib/supabase';
 import { haalVergelijking } from './data';
@@ -33,7 +32,7 @@ function Kerngetal({
 
 export function MijnBelasting() {
   const { medewerkerId } = useAuth();
-  const [schooljaar, setSchooljaar] = useState<string | null>(null);
+  const schooljaar = useSchooljaarKeuze();
   const werkpakketten = useWerkpakketten();
   const pakketNaam = new Map((werkpakketten.data ?? []).map((w) => [w.id, w.naam]));
 
@@ -103,7 +102,7 @@ export function MijnBelasting() {
   return (
     <section aria-labelledby="mijn-titel">
       <h2 id="mijn-titel">Mijn belasting</h2>
-      <SchooljaarKiezer waarde={schooljaar} onWijzig={setSchooljaar} />
+      <SchooljaarKiezer />
       {medewerkerId === null ? <p>Je account is niet aan een medewerker gekoppeld.</p> : null}
       {belasting.isPending && schooljaar ? <p aria-busy="true">Bezig met laden…</p> : null}
       {b ? (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth, type Rol } from '../auth/AuthContext';
+import { useBevestig } from '../components/ui/Bevestiging';
 import { roepFunctieAan, supabase } from '../lib/supabase';
 
 const ROLNAMEN: Record<Rol, string> = {
@@ -51,6 +52,7 @@ interface Resultaat {
 
 /** Accounts aanmaken en resetten (manager en beheerder; SPEC §6, §7). */
 export function Accounts() {
+  const bevestig = useBevestig();
   const { gebruiker, rollen: eigenRollen } = useAuth();
   const queryClient = useQueryClient();
   const rijen = useQuery({ queryKey: ['accounts'], queryFn: laadRijen });
@@ -196,13 +198,13 @@ export function Accounts() {
                         disabled={eigen || resetten.isPending}
                         title={eigen ? 'Je kunt je eigen account niet resetten.' : undefined}
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Account van ${rij.naam} resetten? Alle gekoppelde toestellen worden verwijderd.`,
-                            )
-                          ) {
-                            resetten.mutate(rij);
-                          }
+                          void bevestig({
+                            titel: 'Account resetten?',
+                            tekst: `Het account van ${rij.naam} krijgt een nieuw tijdelijk wachtwoord. Alle gekoppelde toestellen worden verwijderd.`,
+                            bevestigTekst: 'Resetten',
+                          }).then((ja) => {
+                            if (ja) resetten.mutate(rij);
+                          });
                         }}
                       >
                         Resetten

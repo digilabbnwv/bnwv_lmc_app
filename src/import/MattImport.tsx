@@ -8,6 +8,7 @@ import { naamVan, ophalen, useMedewerkers } from '../beheer/data';
 import { functieFout, supabase } from '../lib/supabase';
 import { vertaalFout } from '../lib/fouten';
 import { formatDatum, formatUren } from '../lib/opmaak';
+import { useBevestig } from '../components/ui/Bevestiging';
 import { controleerBestand, controleerPeriode, samenvatting, type Voorvertoning } from './logica';
 
 const STATUSNAAM = {
@@ -191,6 +192,7 @@ function VoorvertoningWeergave({ v, onAlias }: { v: Voorvertoning; onAlias: () =
 }
 
 function Historie() {
+  const bevestig = useBevestig();
   const queryClient = useQueryClient();
   const [melding, setMelding] = useState<string | null>(null);
   const imports = useQuery({
@@ -269,13 +271,14 @@ function Historie() {
                           className="secundair"
                           disabled={actie.isPending}
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                'Import terugdraaien? De boekingen van deze import worden verwijderd. Boekingen die deze import eerder heeft vervangen, komen niet terug: importeer die periode zo nodig opnieuw.',
-                              )
-                            ) {
-                              actie.mutate({ id: i.id, soort: 'terugdraaien' });
-                            }
+                            void bevestig({
+                              titel: 'Import terugdraaien?',
+                              tekst:
+                                'De boekingen van deze import worden verwijderd. Boekingen die deze import eerder heeft vervangen, komen niet terug: importeer die periode zo nodig opnieuw.',
+                              bevestigTekst: 'Terugdraaien',
+                            }).then((ja) => {
+                              if (ja) actie.mutate({ id: i.id, soort: 'terugdraaien' });
+                            });
                           }}
                         >
                           Terugdraaien
@@ -305,6 +308,7 @@ function Historie() {
 }
 
 export function MattImport() {
+  const bevestig = useBevestig();
   const queryClient = useQueryClient();
   const bestandId = useId();
   const [bestand, setBestand] = useState<File | null>(null);
@@ -447,13 +451,14 @@ export function MattImport() {
               type="button"
               disabled={afronden.isPending}
               onClick={() => {
-                if (
-                  window.confirm(
-                    'Definitief maken? Bestaande boekingen van deze medewerkers in deze periode worden vervangen door de boekingen uit dit bestand.',
-                  )
-                ) {
-                  afronden.mutate('definitief');
-                }
+                void bevestig({
+                  titel: 'Import definitief maken?',
+                  tekst:
+                    'Bestaande boekingen van deze medewerkers in deze periode worden vervangen door de boekingen uit dit bestand.',
+                  bevestigTekst: 'Definitief maken',
+                }).then((ja) => {
+                  if (ja) afronden.mutate('definitief');
+                });
               }}
             >
               Definitief maken
