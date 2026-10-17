@@ -43,6 +43,7 @@ jobs:
       - name: Componentengalerij niet in de build
         run: |
           if grep -rq 'Componentengalerij' dist; then echo "::error::De galerij (alleen development) staat in de build"; exit 1; fi
+          if grep -rq 'Demo met fictieve gegevens' dist; then echo "::error::De demomodus (alleen development) staat in de build"; exit 1; fi
 
   database:
     runs-on: ubuntu-latest

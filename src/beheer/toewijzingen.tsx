@@ -282,7 +282,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
       titel: `Toewijzingen ${schooljaar.naam}`,
       enkelvoud: 'toewijzing',
       omschrijving:
-        'Meerdere medewerkers op hetzelfde werkpakket is normaal. Bij een school verdeelt het aandeel de staffeluren.',
+        'Meerdere medewerkers kunnen aan hetzelfde werkpakket werken. Bij een school verdeel je de staffeluren dan met het aandeel.',
       queryKey: ['toewijzing', schooljaar.id, medewerkerFilter],
       laad: async () => {
         const q = supabase()

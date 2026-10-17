@@ -47,3 +47,12 @@ export async function functieFout(error: unknown): Promise<string> {
   }
   return 'Er ging iets mis. Probeer het opnieuw.';
 }
+
+/**
+ * Alleen voor de demomodus in development (src/demo): vervangt de client door een
+ * nagebootste client met fictieve gegevens. In de productiebuild weigert deze functie.
+ */
+export function zetDemoClient(demo: Client): void {
+  if (!import.meta.env.DEV) throw new Error('De demomodus bestaat alleen in development.');
+  client = demo;
+}

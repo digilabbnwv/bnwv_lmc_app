@@ -1,0 +1,93 @@
+/*
+ * Hoogcontrastmodus (Windows "Contrastthema's", forced colors). De browser vervangt dan
+ * kleuren door systeemkleuren en laat achtergronden weg. Zonebalk, grafiek en stappen
+ * dragen betekenis via vulling en arcering; die zetten we hier expliciet in systeemkleuren,
+ * zodat ze zichtbaar blijven. Tekst (het woord van de zone) blijft altijd de hoofddrager.
+ */
+@media (forced-colors: active) {
+  .zone-balk,
+  .grafiek-svg,
+  .grafiek-staal,
+  .stap-nummer {
+    forced-color-adjust: none;
+  }
+
+  .zone-balk {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .zone-vulling,
+  .zone-vol .zone-vulling {
+    background: CanvasText;
+  }
+
+  .zone-boven_capaciteit .zone-vulling,
+  .grafiek-staal-boven {
+    background: repeating-linear-gradient(45deg, CanvasText 0 3px, Canvas 3px 6px);
+  }
+
+  .grafiek-staal-inzetbaar {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .grafiek-staal-gepland {
+    background: CanvasText;
+  }
+
+  .grafiek-raster {
+    stroke: GrayText;
+  }
+
+  .grafiek-basislijn {
+    stroke: CanvasText;
+  }
+
+  .grafiek-as {
+    fill: CanvasText;
+  }
+
+  .grafiek-inzetbaar {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .grafiek-gepland,
+  .grafiek-arcering-lijn {
+    fill: CanvasText;
+  }
+
+  .grafiek-arcering-grond {
+    fill: Canvas;
+  }
+
+  .stap-nummer {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .stap-huidig .stap-nummer {
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+
+  /* Het actieve menu-item heeft anders alleen een achtergrond en een gekleurde lijn. */
+  .navigatie a[aria-current='page'] {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+
+  .badge,
+  .meldingblok,
+  .kaart,
+  .tabel-schuif {
+    border-color: CanvasText;
+  }
+
+  :focus-visible {
+    outline-color: Highlight;
+  }
+}

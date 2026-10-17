@@ -79,3 +79,39 @@ describe('doelbinding in de UI (SPEC §1)', () => {
     );
   });
 });
+
+describe('hoogcontrastmodus (forced colors)', () => {
+  it('zonebalk, grafiek en stappen hebben regels voor forced colors', () => {
+    const css = readFileSync(join(src, 'stijl', 'hoogcontrast.css'), 'utf8');
+    expect(css).toContain('@media (forced-colors: active)');
+    for (const klasse of ['.zone-vulling', '.grafiek-gepland', '.stap-huidig', '.navigatie a']) {
+      expect(css, klasse).toContain(klasse);
+    }
+  });
+});
+
+describe('doelbinding in de handleiding', () => {
+  const handleiding = readFileSync(join(import.meta.dirname, 'docs', 'HANDLEIDING.md'), 'utf8');
+
+  it('geen beoordelende woorden', () => {
+    expect(handleiding).not.toMatch(
+      /achterstand|achterloop|achter op schema|te laat|te weinig|onvoldoende|ondermaats|slecht gepresteerd|tekortschiet/i,
+    );
+  });
+
+  it('bevat de doelbindingstekst en vermeldt dat de afbeeldingen fictief zijn', () => {
+    expect(handleiding).toContain(
+      'Dit overzicht is bedoeld voor capaciteitsplanning en een eerlijke werkverdeling. Het is geen middel om prestaties te beoordelen.',
+    );
+    expect(handleiding).toMatch(/fictieve gegevens/);
+  });
+
+  it('elke afbeelding bestaat, met een beschrijvende alt-tekst', () => {
+    for (const m of handleiding.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
+      expect((m[1] ?? '').length, m[2]).toBeGreaterThan(10);
+      expect(statSync(join(import.meta.dirname, 'docs', m[2] ?? '')).size, m[2]).toBeLessThan(
+        160_000,
+      );
+    }
+  });
+});

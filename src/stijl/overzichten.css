@@ -290,3 +290,23 @@ tfoot td {
   border-top: 1px solid var(--rand);
   font-size: var(--tekst-klein);
 }
+
+/* Smalle schermen en 400% zoom (WCAG 1.4.10): niets breder dan het scherm */
+.zone {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.zone-legenda li {
+  max-width: 100%;
+}
+
+.zone-legenda li > span:last-child {
+  min-width: 0;
+}
+
+/* Naam in een teamkaart: aanraakdoel van minstens 24 px hoog (WCAG 2.5.8) */
+.teamkaart h3 a {
+  display: inline-block;
+  padding-block: var(--ruimte-1);
+}

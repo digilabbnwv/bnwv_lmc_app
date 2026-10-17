@@ -1,8 +1,8 @@
-import { lazy, Suspense } from 'react';
-import { Route, Routes, useLocation } from 'react-router';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Route, Routes, useLocation, useNavigate } from 'react-router';
 import { AuthPoort } from './auth/AuthPoort';
 import { SchooljaarProvider } from './beheer/SchooljaarKiezer';
-import { useAuth } from './auth/AuthContext';
+import { useAuth, type Rol } from './auth/AuthContext';
 import { rechtenVoor } from './auth/rechten';
 import { Doelbinding } from './components/Doelbinding';
 import { BevestigingProvider } from './components/ui/Bevestiging';
@@ -25,6 +25,8 @@ const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m
 
 // Componentengalerij met fictieve data: alleen in development, valt weg uit de productiebuild.
 const Galerij = import.meta.env.DEV ? lazy(() => import('./voorbeelden/Galerij')) : null;
+// Demomodus met fictieve gegevens (#/demo): alleen in development, valt weg uit de build.
+const Demo = import.meta.env.DEV ? lazy(() => import('./demo/Demo')) : null;
 
 function Inhoud() {
   const { rollen, gebruiker, uitloggen } = useAuth();
@@ -60,8 +62,29 @@ function Inhoud() {
   );
 }
 
+const DEMO_ROLLEN: readonly Rol[] = ['lmc', 'coordinator', 'manager', 'beheerder'];
+
+function demoUitPad(pad: string): { rol: Rol; pad: string } | null {
+  const m = /^\/demo\/([a-z]+)(\/.*)?$/.exec(pad);
+  const rol = DEMO_ROLLEN.find((r) => r === m?.[1]);
+  return rol ? { rol, pad: m?.[2] ?? '/' } : null;
+}
+
 export function App() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // Demomodus: #/demo (rol kiezen) of direct #/demo/<rol>/<pagina>, bijv. #/demo/manager/team.
+  const [demoStart] = useState(() => (Demo ? demoUitPad(pathname) : null));
+  const [demoRol, setDemoRol] = useState<Rol | null>(demoStart?.rol ?? null);
+  const demo = Demo && (demoRol !== null || pathname === '/demo');
+  // Eén keer bij het starten; navigate verandert bij elke routewissel.
+  const demoGestart = useRef(false);
+  useEffect(() => {
+    if (demoStart && !demoGestart.current) {
+      demoGestart.current = true;
+      void navigate(demoStart.pad, { replace: true });
+    }
+  }, [demoStart, navigate]);
   return (
     <ToastProvider>
       <BevestigingProvider>
@@ -80,7 +103,19 @@ export function App() {
           <header className="app-kop">
             <h1>{APP_NAAM}</h1>
           </header>
-          {Galerij && pathname === '/voorbeelden' ? (
+          {Demo && demo ? (
+            <Suspense fallback={<Laden />}>
+              <Demo
+                rol={demoRol}
+                kiesRol={(rol) => {
+                  setDemoRol(rol);
+                  void navigate('/');
+                }}
+              >
+                <Inhoud />
+              </Demo>
+            </Suspense>
+          ) : Galerij && pathname === '/voorbeelden' ? (
             <Suspense fallback={<Laden />}>
               <Galerij />
             </Suspense>

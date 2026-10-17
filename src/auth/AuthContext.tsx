@@ -8,7 +8,7 @@ import { useInactiviteit } from './useInactiviteit';
 
 export type Rol = Database['public']['Enums']['rol'];
 
-interface AuthWaarde {
+export interface AuthWaarde {
   stap: Stap;
   gebruiker: User | null;
   /** Geverifieerde TOTP-factoren (toestellen). */
@@ -21,7 +21,8 @@ interface AuthWaarde {
   uitloggen: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthWaarde | null>(null);
+// Geëxporteerd voor de demomodus (alleen development, src/demo).
+export const AuthContext = createContext<AuthWaarde | null>(null);
 
 const BEGIN: AuthToestand = {
   geladen: false,

@@ -729,3 +729,43 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** je kunt zoeken op naam of e-mail en filteren (_met account / zonder account / niet actief_), en elke medewerker heeft een status-badge. Aanmaken (rollen als fieldset, minstens één) en resetten (met uitleg, focus op Annuleren) gaan in één dialoog die doorloopt naar de wachtwoordstap. Het wachtwoord staat alleen in de state van de dialoog. Bij sluiten wordt het gewist, net als het resultaat in de mutation-cache van TanStack Query (`reset()`). Het komt nooit in een toast, URL, `localStorage` of console. Kopiëren meldt "Gekopieerd."; zonder toegang tot het klembord wordt de tekst geselecteerd, met uitleg. Sluiten met Escape of ✕ vraagt eerst of het mag. "Ik heb het wachtwoord doorgegeven" sluit direct. De dialoog krijgt een `stap`-sleutel, zodat de focus bij een nieuwe stap opnieuw naar het `data-autofocus`-element gaat.
 **Reden:** keuze van de eigenaar (eerst bevestigen). SPEC §7: het wachtwoord wordt één keer getoond. Zo gaat het niet per ongeluk verloren en blijft het nergens achter.
+
+## Interface — UI-5 Kwaliteitsronde
+
+### 2026-10-17 · Demomodus met fictieve gegevens (alleen development)
+
+**Keuze:** `#/demo` (rol kiezen) of `#/demo/<rol>/<pagina>` start de echte app met een nagebootste Supabase-client (`src/demo/nepSupabase.ts`, fictieve gegevens uit `src/demo/gegevens.ts`) en een vaste auth-context. Lezen werkt met eenvoudige filters (`eq`, `in`, `is`, `order`, `limit`); schrijven doet niets. `zetDemoClient` weigert buiten development. `?schermafbeelding` verbergt de demobalk; `?stappen=` voert na het laden vaste handelingen uit (`klik:`, `vink:`, `bestand`), één keer, ook onder StrictMode. CI controleert dat de demomodus niet in `dist/` staat.
+**Reden:** keuze van de eigenaar. Zo kun je alle echte schermen bekijken, meten en screenshotten zonder inloggen en zonder het Supabase-project te raken.
+
+### 2026-10-17 · Reflow tot 320 px
+
+**Keuze:** de app werkt vanaf 320 px breed (WCAG 1.4.10). Daarvoor:
+
+- `fieldset { min-width: 0 }`;
+- grid-kolommen van formulieren met `minmax(0, 1fr)`;
+- `input[type=file] { max-width: 100% }`;
+- het beheeroverzicht met `minmax(min(20rem, 100%), 1fr)`;
+- een zonebalk en een legenda die mogen afbreken.
+
+Brede datatabellen scrollen binnen hun eigen vak; tabellen zonder interactieve inhoud zitten in `TabelVak`, een benoemde, focusbare regio.
+**Reden:** keuze van de eigenaar (320 px). Resultaten per pagina en breedte in `docs/KWALITEIT.md`.
+
+### 2026-10-17 · Hoogcontrastmodus
+
+**Keuze:** `src/stijl/hoogcontrast.css` zet onder `forced-colors: active` de zonebalk, arcering, grafiek, stappen en het actieve menu-item in systeemkleuren (`forced-color-adjust: none` waar dat nodig is).
+**Reden:** in de contrastthema's van Windows laat de browser achtergronden weg. Zonder deze regels zouden vulling en arcering verdwijnen.
+
+### 2026-10-17 · Toegankelijkheidscontrole in de browser
+
+**Keuze:** naast de axe-tests per component in Vitest is axe-core in de browser uitgevoerd over alle demoschermen, licht en donker, en met een open paneel en dialoog, **inclusief kleurcontrast**. Er waren geen overtredingen. Dat gebeurt handmatig per kwaliteitsronde, niet in CI.
+**Reden:** jsdom kan geen kleurcontrast en geen `prefers-color-scheme` berekenen. Een browser in CI (Playwright) was eerder bewust niet gekozen (fase 4).
+
+### 2026-10-17 · Handleiding met schermafbeeldingen in de repo
+
+**Keuze:** `docs/HANDLEIDING.md` is vernieuwd, met schermafbeeldingen uit de demomodus (fictieve gegevens, lichte modus, Edge headless, ≤ 160 kB) in `docs/afbeeldingen/`, een hoofdstuk over toegankelijkheid en een woordenlijst. Een test controleert de handleiding op beoordelende woorden, de doelbindingstekst, het bestaan van de afbeeldingen, hun grootte en de alt-teksten.
+**Reden:** keuze van de eigenaar. De repo is publiek; daarom alleen fictieve gegevens, en dat staat er ook bij.
+
+### 2026-10-17 · Geen preload van het lettertype
+
+**Keuze:** het woff2-bestand wordt niet vooraf geladen met `<link rel="preload">`.
+**Reden:** Vite geeft het lettertype een naam met een hash, waardoor `index.html` er niet zonder extra plugin naar kan verwijzen. Het bestand is klein (27 kB) en `font-display: swap` toont meteen tekst in Arial. Het voordeel weegt niet op tegen een extra dependency.

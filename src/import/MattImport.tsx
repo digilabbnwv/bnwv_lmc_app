@@ -12,6 +12,7 @@ import { Knop } from '../components/ui/Knop';
 import { Laden } from '../components/ui/Laden';
 import { Melding } from '../components/ui/Melding';
 import { Stappen } from '../components/ui/Stappen';
+import { TabelVak } from '../components/ui/TabelVak';
 import { useToast } from '../components/ui/Toasts';
 import { vertaalFout } from '../lib/fouten';
 import { formatDatum, formatUren } from '../lib/opmaak';
@@ -157,7 +158,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
 
       {v.niet_gematcht.length > 0 ? (
         <Blok titel="Namen zonder alias" aantal={v.niet_gematcht.length} actie>
-          <div className="tabel-schuif">
+          <TabelVak label="Namen zonder alias">
             <table>
               <caption className="verborgen">Namen zonder alias</caption>
               <thead>
@@ -185,7 +186,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TabelVak>
         </Blok>
       ) : null}
 
@@ -202,7 +203,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
       ) : null}
 
       <Blok titel="Gekoppelde medewerkers" aantal={v.medewerkers.length}>
-        <div className="tabel-schuif">
+        <TabelVak label="Gekoppelde medewerkers">
           <table>
             <caption className="verborgen">Gekoppelde medewerkers</caption>
             <thead>
@@ -226,7 +227,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TabelVak>
       </Blok>
 
       {v.niet_gekoppelde_projecten.length > 0 ? (
@@ -235,7 +236,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
             Deze boekingen worden wél opgeslagen. Koppel de projecten later bij{' '}
             <Link to="/beheer/matt-projecten">MATT-projecten</Link>.
           </p>
-          <div className="tabel-schuif">
+          <TabelVak label="MATT-projecten zonder werkpakket">
             <table>
               <caption className="verborgen">MATT-projecten zonder werkpakket</caption>
               <thead>
@@ -257,7 +258,7 @@ function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TabelVak>
         </Blok>
       ) : null}
     </>

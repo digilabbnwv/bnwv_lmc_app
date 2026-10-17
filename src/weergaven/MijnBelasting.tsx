@@ -16,6 +16,7 @@ import { haalVergelijking, useZonegrenzen } from './data';
 import { MaandGrafiek } from './MaandGrafiek';
 import { ZoneLegenda } from './ZoneLegenda';
 import { ZoneWeergave } from './Zone';
+import { TabelVak } from '../components/ui/TabelVak';
 
 /** Uitleg bij de kerngetallen (SPEC §5), in gewone taal. */
 const UITLEG = {
@@ -160,7 +161,7 @@ export function MijnBelasting() {
 
       <h3>Mijn toewijzingen</h3>
       {toewijzingen.data && toewijzingen.data.length > 0 ? (
-        <div className="tabel-schuif">
+        <TabelVak label="Mijn toewijzingen">
           <table>
             <caption className="verborgen">Mijn toewijzingen</caption>
             <thead>
@@ -189,7 +190,7 @@ export function MijnBelasting() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TabelVak>
       ) : (
         <LegeStaat titel="Nog geen toewijzingen">
           Er zijn in dit schooljaar nog geen werkpakketten aan je toegewezen.

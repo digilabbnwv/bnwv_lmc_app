@@ -4,6 +4,7 @@
 @import './stijl/indeling.css';
 @import './stijl/componenten.css';
 @import './stijl/overzichten.css';
+@import './stijl/hoogcontrast.css';
 
 :root {
   font-family: var(--lettertype);
@@ -95,6 +96,21 @@ button {
   border-radius: var(--rond-klein);
   color: var(--tekst);
   background: var(--oppervlak);
+}
+
+/* Fieldsets en bestandsvelden mogen smaller worden dan hun inhoud (reflow, WCAG 1.4.10). */
+fieldset {
+  min-width: 0;
+}
+
+form,
+label,
+.veld {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+input[type='file'] {
+  max-width: 100%;
 }
 
 input[type='checkbox'],
@@ -268,6 +284,7 @@ textarea[aria-invalid='true'] {
   overflow-x: auto;
   border: 1px solid var(--rand);
   border-radius: var(--rond);
+  margin-bottom: var(--ruimte-4);
 }
 
 .tabel-schuif table {

@@ -15,10 +15,11 @@ import { vertaalFout } from '../lib/fouten';
 import { formatUren } from '../lib/opmaak';
 import { haalVergelijking } from './data';
 import { nietGekoppeld, perCategorie, perWerkpakket, verschil, type Totaal } from './logica';
+import { TabelVak } from '../components/ui/TabelVak';
 
 function Vergelijktabel({ titel, rijen, kop }: { titel: string; rijen: Totaal[]; kop: string }) {
   return (
-    <div className="tabel-schuif">
+    <TabelVak label={titel}>
       <table>
         <caption className="verborgen">{titel}</caption>
         <thead>
@@ -73,7 +74,7 @@ function Vergelijktabel({ titel, rijen, kop }: { titel: string; rijen: Totaal[];
           ))}
         </tbody>
       </table>
-    </div>
+    </TabelVak>
   );
 }
 

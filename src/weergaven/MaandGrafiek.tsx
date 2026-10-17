@@ -6,6 +6,7 @@ import { useId } from 'react';
 import { formatPercentage, formatUren } from '../lib/opmaak';
 import { asSchaal, zoneLabel } from './logica';
 import { ZoneWeergave } from './Zone';
+import { TabelVak } from '../components/ui/TabelVak';
 
 export interface MaandRij {
   periode_van: string;
@@ -158,7 +159,7 @@ export function MaandGrafiek({ rijen }: { rijen: MaandRij[] }) {
       </svg>
       <details className="grafiek-tabel">
         <summary>Als tabel tonen</summary>
-        <div className="tabel-schuif">
+        <TabelVak label="Inzetbaar en gepland per maand">
           <table>
             <caption className="verborgen">Inzetbaar en gepland per maand</caption>
             <thead>
@@ -186,7 +187,7 @@ export function MaandGrafiek({ rijen }: { rijen: MaandRij[] }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TabelVak>
       </details>
     </figure>
   );

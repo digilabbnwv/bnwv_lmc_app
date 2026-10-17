@@ -26,13 +26,13 @@ export function OverDeApp() {
         <li>Toewijzingen aan scholen, activiteiten en projecten.</li>
         <li>
           Boekingen uit MATT (datum, project, artikel, uren). De omschrijving van een boeking ziet
-          alleen de medewerker zelf; een coordinator of beheerder kan die alleen opvragen als dat
+          alleen de medewerker zelf; een coördinator of beheerder kan die alleen opvragen als dat
           nodig is, en dat wordt vastgelegd.
         </li>
       </ul>
       <h3>Wie ziet wat</h3>
       <p>
-        Je ziet altijd je eigen gegevens. Coordinatoren, managers en beheerders zien de belasting
+        Je ziet altijd je eigen gegevens. Coördinatoren, managers en beheerders zien de belasting
         van het hele team om het werk eerlijk te verdelen. Elke wijziging wordt vastgelegd in een
         logboek.
       </p>

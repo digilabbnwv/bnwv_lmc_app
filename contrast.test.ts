@@ -48,6 +48,14 @@ const PAREN: [string, string, number][] = [
   ['--focus', '--oppervlak-zacht', 3],
   ['--zone-vulling', '--oppervlak', 3],
   ['--zone-vol', '--oppervlak', 3],
+  // Componenten (UI-5): focus op het actieve menu-item, arcering, grafiek en badges
+  ['--focus', '--markering', 3],
+  ['--focus', '--oppervlak', 3],
+  ['--zone-boven-a', '--oppervlak', 3],
+  ['--zone-boven-a', '--zone-boven-b', 1.5],
+  ['--gedempt', '--oppervlak-zacht', 3],
+  ['--zone-vol', '--oppervlak-zacht', 3],
+  ['--rand-sterk', '--achtergrond', 3],
 ];
 
 describe.each([

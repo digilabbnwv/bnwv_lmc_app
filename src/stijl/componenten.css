@@ -402,7 +402,7 @@ button.foutoverzicht-link:hover:not(:disabled) {
 }
 
 /* Alleen-lezen velden: zichtbaar anders dan invulbare velden */
-input:read-only:not([type='checkbox'], [type='radio']),
+input:read-only:not([type='checkbox'], [type='radio'], [type='file']),
 textarea:read-only,
 select:disabled {
   background: var(--oppervlak-zacht);
@@ -441,7 +441,7 @@ select:disabled {
 /* Beheeroverzicht: een kaart per groep */
 .beheer-groepen {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
   gap: var(--ruimte-4);
   align-items: start;
 }
@@ -632,4 +632,13 @@ form.inline {
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   font-size: 1.35rem;
   letter-spacing: 0.08em;
+}
+
+/* Demomodus (alleen development) */
+.demo-balk {
+  margin: 0;
+  padding: var(--ruimte-2) var(--ruimte-5);
+  background: var(--markering);
+  border-bottom: 1px solid var(--rand);
+  font-size: var(--tekst-klein);
 }
