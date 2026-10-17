@@ -1,104 +1,143 @@
-/* Neutrale basisstijl. Geen beoordelende kleuren (SPEC §1). */
+/* Basisstijl. Geen beoordelende kleuren (SPEC §1); kleuren alleen via tokens. */
+@import './stijl/tokens.css';
+@import './stijl/lettertype.css';
+@import './stijl/indeling.css';
+@import './stijl/componenten.css';
+
 :root {
-  --tekst: #1f2328;
-  --achtergrond: #ffffff;
-  --rand: #d0d7de;
-  --gedempt: #57606a;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.5;
+  font-family: var(--lettertype);
+  font-size: 100%;
+  line-height: var(--regel-tekst);
   color: var(--tekst);
   background: var(--achtergrond);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Koppen: links uitgelijnd, interlinie 1,2 (huisstijlgids §4.2) */
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--regel-kop);
+  margin: 0 0 var(--ruimte-4);
 }
 
-.app-kop,
-.app-voet {
-  padding: 0.75rem 1.5rem;
-  border-color: var(--rand);
+h1 {
+  font-size: var(--kop-1);
+  font-weight: 800;
 }
 
-.app-kop {
-  border-bottom: 1px solid var(--rand);
+h2 {
+  font-size: var(--kop-2);
+  font-weight: 800;
 }
 
-.app-kop h1 {
-  margin: 0;
-  font-size: 1.25rem;
+h3 {
+  font-size: var(--kop-3);
+  font-weight: 700;
 }
 
-.app-inhoud {
-  flex: 1;
-  padding: 1.5rem;
+p {
+  margin: 0 0 var(--ruimte-4);
 }
 
-.app-voet {
-  border-top: 1px solid var(--rand);
-  color: var(--gedempt);
-  font-size: 0.875rem;
+a {
+  color: var(--tekst);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
 }
 
-/* Formulieren en tabellen (fase 2) */
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Formulieren en tabellen */
 .kader {
   max-width: 32rem;
-  padding: 1rem 1.25rem;
+  padding: var(--ruimte-5);
+  background: var(--oppervlak);
   border: 1px solid var(--rand);
-  border-radius: 0.5rem;
+  border-radius: var(--rond-groot);
+  box-shadow: var(--schaduw);
 }
 
 form {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--ruimte-4);
   max-width: 28rem;
 }
 
 label {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--ruimte-1);
 }
 
 input,
 select,
+textarea,
 button {
   font: inherit;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--rand);
-  border-radius: 0.375rem;
+  min-height: var(--aanraak);
+  padding: var(--ruimte-2) var(--ruimte-3);
+  border: 1px solid var(--rand-sterk);
+  border-radius: var(--rond-klein);
+  color: var(--tekst);
+  background: var(--oppervlak);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  min-height: auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--knop-achtergrond);
 }
 
 button {
   cursor: pointer;
-  background: var(--tekst);
-  color: var(--achtergrond);
-  border-color: var(--tekst);
+  font-weight: 600;
+  background: var(--knop-achtergrond);
+  color: var(--knop-tekst);
+  border-color: var(--knop-achtergrond);
+  transition: filter var(--duur);
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.15);
 }
 
 button.secundair {
-  background: transparent;
+  background: var(--oppervlak);
   color: var(--tekst);
+  border-color: var(--rand-sterk);
+}
+
+button.secundair:hover:not(:disabled) {
+  filter: none;
+  background: var(--oppervlak-zacht);
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+/* Focus: dubbele ring, zichtbaar op elke achtergrond (WCAG 2.4.7) */
 :focus-visible {
-  outline: 3px solid #0969da;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--achtergrond);
 }
 
 .melding:empty {
@@ -123,34 +162,29 @@ button:disabled {
 
 .qr {
   background: #fff;
-  padding: 0.5rem;
-}
-
-nav ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1.5rem;
-}
-
-nav a[aria-current='page'] {
-  font-weight: 700;
+  padding: var(--ruimte-2);
+  border-radius: var(--rond);
 }
 
 table {
   border-collapse: collapse;
   width: 100%;
+  background: var(--oppervlak);
 }
 
 th,
 td {
   text-align: left;
-  padding: 0.5rem;
+  padding: var(--ruimte-2) var(--ruimte-3);
   border-bottom: 1px solid var(--rand);
   vertical-align: top;
+}
+
+thead th {
+  background: var(--oppervlak-zacht);
+  font-size: var(--tekst-klein);
+  font-weight: 700;
+  border-bottom-color: var(--rand-sterk);
 }
 
 fieldset.rollen {
@@ -159,12 +193,12 @@ fieldset.rollen {
   margin: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  gap: var(--ruimte-2) var(--ruimte-4);
 }
 
 fieldset.rollen label {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--ruimte-2);
   align-items: center;
 }
 
@@ -183,7 +217,7 @@ fieldset.rollen label {
 
 /* Beheerschermen (fase 4) */
 .beheer {
-  margin-bottom: 2rem;
+  margin-bottom: var(--ruimte-6);
 }
 
 .beheer-balk,
@@ -191,22 +225,22 @@ fieldset.rollen label {
 .knoppen {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--ruimte-3);
   align-items: end;
 }
 
 .beheer-formulier {
-  margin: 1rem 0;
+  margin: var(--ruimte-4) 0;
 }
 
 .veld {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--ruimte-1);
 }
 
 .veld-vinkje {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--ruimte-2);
   align-items: center;
 }
 
@@ -231,6 +265,16 @@ textarea[aria-invalid='true'] {
 
 .tabel-schuif {
   overflow-x: auto;
+  border: 1px solid var(--rand);
+  border-radius: var(--rond);
+}
+
+.tabel-schuif table {
+  background: transparent;
+}
+
+.tabel-schuif tbody tr:last-child > * {
+  border-bottom: 0;
 }
 
 td.numeriek,
@@ -240,6 +284,7 @@ th.numeriek {
 }
 
 button.sorteer {
+  min-height: auto;
   background: none;
   border: 0;
   padding: 0;
@@ -263,9 +308,9 @@ button.gevaar {
 .tabbladen {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: var(--ruimte-1);
   border-bottom: 1px solid var(--rand);
-  margin-bottom: 1rem;
+  margin-bottom: var(--ruimte-4);
 }
 
 .tab {
@@ -273,29 +318,23 @@ button.gevaar {
   color: var(--tekst);
   border: 1px solid transparent;
   border-bottom: 0;
-  border-radius: 0.375rem 0.375rem 0 0;
+  border-radius: var(--rond-klein) var(--rond-klein) 0 0;
 }
 
 .tab.actief {
   border-color: var(--rand);
   font-weight: 700;
+  background: var(--oppervlak);
 }
 
 .datumlijst {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--ruimte-2);
 }
 
 .datumlijst-rij {
   display: flex;
-  gap: 0.5rem;
-}
-
-textarea {
-  font: inherit;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--rand);
-  border-radius: 0.375rem;
+  gap: var(--ruimte-2);
 }
 
 /* Tablet en kleiner: formulieren op volle breedte */
@@ -305,27 +344,28 @@ textarea {
   }
 }
 
-/* Overzichten (fase 6). Neutraal: geen rood/oranje/groen (SPEC §1). */
+/* Overzichten (fase 6). Neutraal: alleen grijstinten (SPEC §1). */
 .kerngetallen {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: var(--ruimte-4);
+  margin: var(--ruimte-4) 0;
 }
 
 .kerngetal {
+  background: var(--oppervlak);
   border: 1px solid var(--rand);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
+  border-radius: var(--rond-groot);
+  padding: var(--ruimte-3) var(--ruimte-4);
 }
 
 .kerngetal dt {
   color: var(--gedempt);
-  font-size: 0.875rem;
+  font-size: var(--tekst-klein);
 }
 
 .kerngetal dd {
-  margin: 0.25rem 0 0;
+  margin: var(--ruimte-1) 0 0;
 }
 
 .kerngetal-waarde {
@@ -336,7 +376,7 @@ textarea {
 
 .zone {
   display: inline-flex;
-  gap: 0.5rem;
+  gap: var(--ruimte-2);
   align-items: center;
 }
 
@@ -352,21 +392,25 @@ textarea {
 .zone-vulling {
   display: block;
   height: 100%;
-  background: #8c959f;
+  background: var(--zone-vulling);
 }
 
 .zone-vol .zone-vulling {
-  background: #57606a;
+  background: var(--zone-vol);
 }
 
 .zone-boven_capaciteit .zone-vulling {
-  background: repeating-linear-gradient(45deg, #24292f 0 3px, #8c959f 3px 6px);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--zone-boven-a) 0 3px,
+    var(--zone-boven-b) 3px 6px
+  );
 }
 
 caption {
   text-align: left;
   font-weight: 700;
-  padding: 0.5rem 0;
+  padding: var(--ruimte-2) 0;
 }
 
 tbody th {

@@ -1,0 +1,195 @@
+/* App-indeling: kop, navigatie, inhoud en voet. */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--achtergrond);
+}
+
+/* "Naar de inhoud": alleen zichtbaar bij toetsenbordfocus (WCAG 2.4.1) */
+.naar-inhoud {
+  position: absolute;
+  left: var(--ruimte-4);
+  top: -10rem;
+  z-index: 100;
+  padding: var(--ruimte-2) var(--ruimte-4);
+  background: var(--knop-achtergrond);
+  color: var(--knop-tekst);
+  border-radius: var(--rond-klein);
+  font-weight: 600;
+}
+
+.naar-inhoud:focus {
+  top: var(--ruimte-2);
+}
+
+/* Kop: wit met de oranje merklijn (huisstijlgids §3.1) */
+.app-kop {
+  display: flex;
+  align-items: center;
+  gap: var(--ruimte-4);
+  min-height: 3.5rem;
+  padding: var(--ruimte-2) var(--ruimte-5);
+  background: var(--oppervlak);
+  border-top: 4px solid var(--merk-oranje);
+  border-bottom: 1px solid var(--rand);
+}
+
+.app-kop h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.app-inhoud {
+  flex: 1;
+  width: 100%;
+  max-width: var(--inhoud-max);
+  padding: var(--ruimte-5);
+}
+
+.app-inhoud:focus {
+  outline: none;
+}
+
+/* Inlogschermen: smalle kolom */
+.app-inhoud-smal {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  padding-top: var(--ruimte-7);
+}
+
+.app-inhoud-smal .kader {
+  width: 100%;
+}
+
+.app-voet {
+  padding: var(--ruimte-3) var(--ruimte-5);
+  border-top: 1px solid var(--rand);
+  color: var(--gedempt);
+  font-size: var(--tekst-klein);
+  background: var(--oppervlak);
+}
+
+.app-voet p {
+  margin: 0;
+}
+
+/* Na inloggen: navigatie links, inhoud rechts */
+.indeling {
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--navigatie-breedte) minmax(0, 1fr);
+}
+
+.navigatie {
+  padding: var(--ruimte-4) var(--ruimte-3);
+  background: var(--oppervlak-zacht);
+  border-right: 1px solid var(--rand);
+}
+
+.navigatie-knop {
+  display: none;
+}
+
+.navigatie-groep {
+  margin: 0 0 var(--ruimte-4);
+}
+
+.navigatie-groep-titel {
+  margin: 0 0 var(--ruimte-1);
+  padding: 0 var(--ruimte-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gedempt);
+}
+
+.navigatie ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.navigatie a,
+.navigatie .navigatie-uitloggen {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--aanraak);
+  padding: var(--ruimte-2) var(--ruimte-3);
+  border-radius: var(--rond-klein);
+  color: var(--tekst);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.navigatie a:hover {
+  background: var(--oppervlak);
+}
+
+.navigatie a[aria-current='page'] {
+  background: var(--markering);
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 var(--merk-oranje);
+}
+
+.navigatie .navigatie-uitloggen {
+  justify-content: flex-start;
+  background: transparent;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.navigatie .navigatie-uitloggen:hover:not(:disabled) {
+  filter: none;
+  background: var(--oppervlak);
+}
+
+.navigatie-gebruiker {
+  margin: 0 0 var(--ruimte-1);
+  padding: 0 var(--ruimte-3);
+  font-size: var(--tekst-klein);
+  color: var(--gedempt);
+  overflow-wrap: anywhere;
+}
+
+/* Tablet en kleiner: navigatie boven de inhoud, inklapbaar */
+@media (max-width: 64rem) {
+  .indeling {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .navigatie {
+    border-right: 0;
+    border-bottom: 1px solid var(--rand);
+    padding: var(--ruimte-2) var(--ruimte-4);
+  }
+
+  .navigatie-knop {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ruimte-2);
+  }
+
+  .navigatie-menu {
+    display: none;
+    padding-top: var(--ruimte-3);
+  }
+
+  .navigatie.open .navigatie-menu {
+    display: block;
+  }
+
+  .app-kop,
+  .app-inhoud,
+  .app-voet {
+    padding-left: var(--ruimte-4);
+    padding-right: var(--ruimte-4);
+  }
+}
