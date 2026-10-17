@@ -1,0 +1,292 @@
+/* Overzichten (UI-3). Neutraal: alleen grijstinten en arcering (SPEC §1). */
+
+/* Kerngetallen */
+.kerngetallen {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.kerngetal {
+  display: grid;
+  align-content: start;
+  gap: var(--ruimte-1);
+}
+
+.kerngetal-waarde {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: var(--regel-kop);
+}
+
+.kerngetal-eenheid {
+  color: var(--gedempt);
+}
+
+.kerngetal-uitleg {
+  margin-top: var(--ruimte-2);
+  font-size: var(--tekst-klein);
+}
+
+.kerngetal-uitleg summary {
+  cursor: pointer;
+  color: var(--gedempt);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  min-height: 1.75rem;
+}
+
+.kerngetal-uitleg p {
+  margin: var(--ruimte-2) 0 0;
+}
+
+/* Belasting: grotere zonebalk */
+.belasting-blok {
+  display: grid;
+  gap: var(--ruimte-3);
+}
+
+.belasting-blok .zone-balk {
+  width: min(16rem, 60vw);
+  height: 0.9rem;
+}
+
+.belasting-blok .zone-tekst {
+  font-size: var(--tekst-groot);
+  font-weight: 700;
+}
+
+/* Zonelegenda */
+.zone-legenda ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-2) var(--ruimte-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--tekst-klein);
+}
+
+.zone-legenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ruimte-2);
+}
+
+.zone-legenda-intro {
+  margin-bottom: var(--ruimte-2);
+  font-size: var(--tekst-klein);
+}
+
+/* Maandgrafiek */
+.grafiek {
+  margin: 0 0 var(--ruimte-4);
+}
+
+.grafiek-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-2) var(--ruimte-5);
+  margin: 0 0 var(--ruimte-2);
+  padding: 0;
+  list-style: none;
+  font-size: var(--tekst-klein);
+}
+
+.grafiek-legenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ruimte-2);
+}
+
+.grafiek-staal {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+}
+
+.grafiek-staal-inzetbaar {
+  background: var(--oppervlak-zacht);
+  border: 1.5px solid var(--gedempt);
+}
+
+.grafiek-staal-gepland {
+  background: var(--zone-vol);
+}
+
+.grafiek-staal-boven {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--zone-boven-a) 0 3px,
+    var(--zone-boven-b) 3px 6px
+  );
+}
+
+.grafiek-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 18rem;
+  overflow: visible;
+}
+
+.grafiek-raster {
+  stroke: var(--rand);
+  stroke-width: 1;
+}
+
+.grafiek-basislijn {
+  stroke: var(--rand-sterk);
+  stroke-width: 1;
+}
+
+.grafiek-as {
+  fill: var(--gedempt);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.grafiek-inzetbaar {
+  fill: var(--oppervlak-zacht);
+  stroke: var(--gedempt);
+  stroke-width: 1.5;
+}
+
+.grafiek-gepland {
+  fill: var(--zone-vol);
+}
+
+.grafiek-arcering-grond {
+  fill: var(--zone-boven-b);
+}
+
+.grafiek-arcering-lijn {
+  fill: var(--zone-boven-a);
+}
+
+.grafiek-raakvlak {
+  fill: transparent;
+}
+
+.grafiek-groep:hover .grafiek-raakvlak {
+  fill: var(--oppervlak-zacht);
+}
+
+.grafiek-tabel summary,
+.details-tabel summary {
+  cursor: pointer;
+  font-weight: 600;
+  /* Aanraakdoel van 44px, met behoud van het uitklappijltje */
+  padding: 0.6rem 0;
+}
+
+/* Filters boven een overzicht */
+.overzicht-balk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-3) var(--ruimte-4);
+  align-items: end;
+  margin-bottom: var(--ruimte-4);
+}
+
+.overzicht-balk .telling {
+  margin: 0;
+  align-self: center;
+}
+
+/* Teamoverzicht: tabel op brede schermen, kaarten op smalle */
+tfoot th,
+tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--rand-sterk);
+  border-bottom: 0;
+  background: var(--oppervlak-zacht);
+}
+
+.teamkaarten {
+  display: none;
+  gap: var(--ruimte-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.teamkaart {
+  padding: var(--ruimte-3) var(--ruimte-4);
+  background: var(--oppervlak);
+  border: 1px solid var(--rand);
+  border-radius: var(--rond-groot);
+}
+
+.teamkaart h3 {
+  margin: 0 0 var(--ruimte-2);
+  font-size: var(--tekst-basis);
+}
+
+.teamkaart dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ruimte-1) var(--ruimte-4);
+  margin: 0 0 var(--ruimte-2);
+  font-size: var(--tekst-klein);
+}
+
+.teamkaart dt {
+  color: var(--gedempt);
+}
+
+.teamkaart dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.teamkaart-totaal {
+  background: var(--oppervlak-zacht);
+}
+
+@media (max-width: 48rem) {
+  .teamtabel {
+    display: none;
+  }
+
+  .teamkaarten {
+    display: grid;
+  }
+}
+
+/* Gepland en gerealiseerd: een kaart per categorie */
+.categoriekaarten {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--ruimte-4);
+  margin-bottom: var(--ruimte-4);
+}
+
+.categoriekaarten .kaart {
+  margin: 0;
+}
+
+.categoriekaarten dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ruimte-1) var(--ruimte-4);
+  margin: 0;
+}
+
+.categoriekaarten dt {
+  color: var(--gedempt);
+}
+
+.categoriekaarten dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.categoriekaart-tot {
+  margin: var(--ruimte-3) 0 0;
+  padding-top: var(--ruimte-2);
+  border-top: 1px solid var(--rand);
+  font-size: var(--tekst-klein);
+}

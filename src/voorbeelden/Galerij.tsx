@@ -14,6 +14,9 @@ import { Laden } from '../components/ui/Laden';
 import { Melding } from '../components/ui/Melding';
 import { useToast } from '../components/ui/Toasts';
 import { Indeling } from '../indeling/Indeling';
+import { Kerngetal, Kerngetallen } from '../components/ui/Kerngetal';
+import { MaandGrafiek } from '../weergaven/MaandGrafiek';
+import { ZoneLegenda } from '../weergaven/ZoneLegenda';
 import { ZoneWeergave } from '../weergaven/Zone';
 
 const KLEUREN = [
@@ -51,6 +54,7 @@ export default function Galerij() {
         <Meldingen />
         <Blokken />
         <Tabel />
+        <Overzicht />
         <Overlays />
         <Formulier />
         <Beheer />
@@ -406,6 +410,52 @@ function Beheer() {
         Mag bewerken
       </label>
       <BeheerScherm key={String(bewerken)} definitie={schoolDefinitie} magBewerken={bewerken} />
+    </section>
+  );
+}
+
+/** Fictieve maanden van een schooljaar: inzetbaar en gepland. */
+const MAANDEN = [
+  [40, 22],
+  [92, 80],
+  [88, 84],
+  [76, 70],
+  [70, 68],
+  [84, 96],
+  [66, 58],
+  [90, 86],
+  [80, 72],
+  [74, 70],
+  [86, 60],
+  [30, 12],
+].map(([inzetbaar = 0, gepland = 0], i) => {
+  const graad = gepland / inzetbaar;
+  const datum = new Date(2026, 7 + i, 1);
+  return {
+    periode_van: `${String(datum.getFullYear())}-${String(datum.getMonth() + 1).padStart(2, '0')}-01`,
+    inzetbaar,
+    gepland,
+    belastingsgraad: graad,
+    zone: graad > 1 ? 'boven_capaciteit' : graad >= 0.85 ? 'vol' : 'ruimte',
+  };
+});
+
+function Overzicht() {
+  return (
+    <section aria-labelledby="g-overzicht">
+      <h3 id="g-overzicht">Kerngetallen, zonelegenda en maandgrafiek</h3>
+      <Kerngetallen>
+        <Kerngetal
+          label="Inzetbaar"
+          waarde="904,4"
+          eenheid="uur"
+          uitleg="Contracturen over de werkdagen, min feestdagen, vakantie-uren en overhead."
+        />
+        <Kerngetal label="Gepland" waarde="778,0" eenheid="uur" />
+        <Kerngetal label="Resterende ruimte" waarde="126,4" eenheid="uur" />
+      </Kerngetallen>
+      <ZoneLegenda grenzen={{ vol: 85, boven: 100 }} />
+      <MaandGrafiek rijen={MAANDEN} />
     </section>
   );
 }

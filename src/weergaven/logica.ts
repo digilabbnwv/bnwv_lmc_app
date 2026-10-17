@@ -182,3 +182,79 @@ export function verschil(gerealiseerd: number, gepland: number): string {
   if (v < 0) return `−${tekst}`;
   return tekst;
 }
+
+export interface Zonegrenzen {
+  /** Percentage vanaf waar de zone "vol" is (seed: 85). */
+  vol: number;
+  /** Percentage waarboven de zone "boven capaciteit" is (seed: 100). */
+  boven: number;
+}
+
+/**
+ * De grenzen die gelden op `datum`: per sleutel de waarde met de laatste ingangsdatum op of
+ * vóór die datum (zoals private.instelling_op in de database). Null als er een ontbreekt.
+ */
+export function zonegrenzen(
+  instellingen: readonly { sleutel: string; waarde: string; ingangsdatum: string }[],
+  datum: string,
+): Zonegrenzen | null {
+  const op = (sleutel: string) => {
+    const geldig = instellingen
+      .filter((i) => i.sleutel === sleutel && i.ingangsdatum <= datum)
+      .sort((a, b) => b.ingangsdatum.localeCompare(a.ingangsdatum))[0];
+    const getal = geldig ? Number(geldig.waarde) : NaN;
+    return Number.isFinite(getal) ? getal : null;
+  };
+  const vol = op('grens_vol');
+  const boven = op('grens_boven_capaciteit');
+  return vol === null || boven === null ? null : { vol, boven };
+}
+
+export type ZoneFilter = 'alle' | Zone | 'geen';
+
+/** Zoeken op naam (hoofdletterongevoelig) en filteren op zone. */
+export function filterTeam(rijen: TeamRij[], zoek: string, zone: ZoneFilter): TeamRij[] {
+  const term = zoek.trim().toLocaleLowerCase('nl');
+  return rijen.filter(
+    (r) =>
+      (!term || r.naam.toLocaleLowerCase('nl').includes(term)) &&
+      (zone === 'alle' || (zone === 'geen' ? r.zone === null : r.zone === zone)),
+  );
+}
+
+export interface TeamTotaal {
+  aantal: number;
+  contracturen: number;
+  inzetbaar: number;
+  gepland: number;
+  ruimte: number;
+}
+
+/** Totalen voor capaciteitsplanning op teamniveau (over de getoonde rijen). */
+export function teamTotaal(rijen: TeamRij[]): TeamTotaal {
+  return rijen.reduce<TeamTotaal>(
+    (t, r) => ({
+      aantal: t.aantal + 1,
+      contracturen: t.contracturen + (r.contracturen_per_week ?? 0),
+      inzetbaar: t.inzetbaar + r.inzetbaar,
+      gepland: t.gepland + r.gepland,
+      ruimte: t.ruimte + r.ruimte,
+    }),
+    { aantal: 0, contracturen: 0, inzetbaar: 0, gepland: 0, ruimte: 0 },
+  );
+}
+
+/**
+ * Een ronde bovengrens voor de y-as en de tussenstappen (0 en hooguit drie stappen erboven),
+ * bijvoorbeeld 0, 50, 100, 150 bij een hoogste waarde van 104.
+ */
+export function asSchaal(hoogste: number): { max: number; stappen: number[] } {
+  if (!(hoogste > 0)) return { max: 1, stappen: [0] };
+  const ruw = hoogste / 3;
+  const orde = 10 ** Math.floor(Math.log10(ruw));
+  const stap = ([1, 2, 2.5, 5, 10].find((f) => f * orde >= ruw) ?? 10) * orde;
+  const max = stap * Math.ceil(hoogste / stap);
+  const stappen: number[] = [];
+  for (let s = 0; s <= max + stap / 2; s += stap) stappen.push(Math.round(s * 100) / 100);
+  return { max, stappen };
+}

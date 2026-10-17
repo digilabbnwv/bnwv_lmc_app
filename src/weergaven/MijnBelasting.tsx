@@ -5,30 +5,28 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { BRONNAAM, ophalen, useWerkpakketten, VERDELINGNAAM } from '../beheer/data';
 import { SchooljaarKiezer, useSchooljaarKeuze } from '../beheer/SchooljaarKiezer';
+import { Kaart, LegeStaat } from '../components/ui/Kaart';
+import { Kerngetal, Kerngetallen } from '../components/ui/Kerngetal';
+import { Laden } from '../components/ui/Laden';
+import { Melding } from '../components/ui/Melding';
+import { vertaalFout } from '../lib/fouten';
 import { formatDatum, formatUren } from '../lib/opmaak';
 import { supabase } from '../lib/supabase';
-import { haalVergelijking } from './data';
+import { haalVergelijking, useZonegrenzen } from './data';
+import { MaandGrafiek } from './MaandGrafiek';
+import { ZoneLegenda } from './ZoneLegenda';
 import { ZoneWeergave } from './Zone';
 
-function Kerngetal({
-  label,
-  waarde,
-  toelichting,
-}: {
-  label: string;
-  waarde: string;
-  toelichting?: string;
-}) {
-  return (
-    <div className="kerngetal">
-      <dt>{label}</dt>
-      <dd>
-        <span className="kerngetal-waarde">{waarde}</span>
-        {toelichting ? <span className="toelichting"> {toelichting}</span> : null}
-      </dd>
-    </div>
-  );
-}
+/** Uitleg bij de kerngetallen (SPEC §5), in gewone taal. */
+const UITLEG = {
+  inzetbaar:
+    'Je contracturen over de werkdagen van het schooljaar, zonder feestdagen en rekening houdend met je beschikbaarheid. Daar gaan je vakantie-uren af, en daarna een vast percentage voor overhead.',
+  gepland:
+    'De uren van je toewijzingen in dit schooljaar: scholen (staffeluren × opslagfactor), activiteiten (aantal keer × normuren) en projecten (de toegewezen uren).',
+  gerealiseerd: 'De uren die je in MATT hebt geboekt, uit de definitieve imports.',
+  ruimte:
+    'Inzetbaar min gepland. Een negatief getal betekent dat er meer gepland is dan er inzetbaar is.',
+};
 
 export function MijnBelasting() {
   const { medewerkerId } = useAuth();
@@ -96,30 +94,58 @@ export function MijnBelasting() {
     },
   });
 
+  const grenzen = useZonegrenzen(schooljaar);
   const b = belasting.data;
   const gerealiseerd = (vergelijk.data ?? []).reduce((t, r) => t + r.gerealiseerd, 0);
 
   return (
     <section aria-labelledby="mijn-titel">
       <h2 id="mijn-titel">Mijn belasting</h2>
-      <SchooljaarKiezer />
-      {medewerkerId === null ? <p>Je account is niet aan een medewerker gekoppeld.</p> : null}
-      {belasting.isPending && schooljaar ? <p aria-busy="true">Bezig met laden…</p> : null}
+      <div className="overzicht-balk">
+        <SchooljaarKiezer />
+      </div>
+      {medewerkerId === null ? (
+        <Melding soort="let-op" titel="Geen medewerker gekoppeld">
+          Je account is niet aan een medewerker gekoppeld. Vraag een manager of beheerder om dat te
+          doen.
+        </Melding>
+      ) : null}
+      {belasting.isPending && schooljaar && medewerkerId ? <Laden /> : null}
+      {belasting.isError ? <Melding soort="fout">{vertaalFout(belasting.error)}</Melding> : null}
       {b ? (
         <>
-          <dl className="kerngetallen">
-            <Kerngetal label="Inzetbaar" waarde={formatUren(b.inzetbaar)} toelichting="uur" />
-            <Kerngetal label="Gepland" waarde={formatUren(b.gepland)} toelichting="uur" />
+          <Kerngetallen>
+            <Kerngetal
+              label="Inzetbaar"
+              waarde={formatUren(b.inzetbaar)}
+              eenheid="uur"
+              uitleg={UITLEG.inzetbaar}
+            />
+            <Kerngetal
+              label="Gepland"
+              waarde={formatUren(b.gepland)}
+              eenheid="uur"
+              uitleg={UITLEG.gepland}
+            />
             <Kerngetal
               label="Gerealiseerd (MATT)"
               waarde={formatUren(gerealiseerd)}
-              toelichting="uur"
+              eenheid="uur"
+              uitleg={UITLEG.gerealiseerd}
             />
-            <Kerngetal label="Resterende ruimte" waarde={formatUren(b.ruimte)} toelichting="uur" />
-          </dl>
-          <p>
-            Belastingsgraad: <ZoneWeergave zone={b.zone} graad={b.belastingsgraad} />
-          </p>
+            <Kerngetal
+              label="Resterende ruimte"
+              waarde={formatUren(b.ruimte)}
+              eenheid="uur"
+              uitleg={UITLEG.ruimte}
+            />
+          </Kerngetallen>
+          <Kaart titel="Belasting">
+            <div className="belasting-blok">
+              <ZoneWeergave zone={b.zone} graad={b.belastingsgraad} />
+              <ZoneLegenda grenzen={grenzen} />
+            </div>
+          </Kaart>
           <p>
             <Link to="/gepland-gerealiseerd">
               Gepland en gerealiseerd per categorie en werkpakket
@@ -127,7 +153,9 @@ export function MijnBelasting() {
           </p>
         </>
       ) : schooljaar && belasting.isSuccess ? (
-        <p>Voor dit schooljaar zijn er geen gegevens.</p>
+        <LegeStaat titel="Geen gegevens voor dit schooljaar">
+          Er is voor dit schooljaar nog geen contract of planning.
+        </LegeStaat>
       ) : null}
 
       <h3>Mijn toewijzingen</h3>
@@ -163,46 +191,15 @@ export function MijnBelasting() {
           </table>
         </div>
       ) : (
-        <p>Er zijn nog geen toewijzingen in dit schooljaar.</p>
+        <LegeStaat titel="Nog geen toewijzingen">
+          Er zijn in dit schooljaar nog geen werkpakketten aan je toegewezen.
+        </LegeStaat>
       )}
 
       {perMaand.data && perMaand.data.length > 0 ? (
         <>
           <h3>Per maand</h3>
-          <div className="tabel-schuif">
-            <table>
-              <caption className="verborgen">Inzetbaar en gepland per maand</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Maand</th>
-                  <th scope="col" className="numeriek">
-                    Inzetbaar
-                  </th>
-                  <th scope="col" className="numeriek">
-                    Gepland
-                  </th>
-                  <th scope="col">Belasting</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perMaand.data.map((m) => (
-                  <tr key={m.periode_van}>
-                    <td>
-                      {new Date(m.periode_van).toLocaleDateString('nl-NL', {
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </td>
-                    <td className="numeriek">{formatUren(m.inzetbaar)}</td>
-                    <td className="numeriek">{formatUren(m.gepland)}</td>
-                    <td>
-                      <ZoneWeergave zone={m.zone} graad={m.belastingsgraad} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <MaandGrafiek rijen={perMaand.data} />
         </>
       ) : null}
     </section>
