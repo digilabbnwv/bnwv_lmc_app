@@ -591,3 +591,50 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 - Een tijdelijk wachtwoord bevat altijd minstens één hoofdletter, kleine letter, cijfer en leesteken, uit een alfabet van 65 tekens (ongeveer 120 bits).
 
 **Reden:** tijdens de rondgang gaf de algemene melding "bestaat het al?" geen houvast; er bestond een handmatig aangemaakte gebruiker. Met alle tekenklassen werkt aanmaken ook als in het dashboard per ongeluk samenstellingseisen aan staan. Voor wat de gebruiker zelf kiest geldt nog steeds SPEC §7: minimaal 12 tekens, geen samenstellingsregels.
+
+## Interface — UI-1 Fundament
+
+### 2026-10-17 · Huisstijl BNWV vertaald naar design tokens
+
+**Keuze:** de kleuren komen uit de huisstijlgids van Bibliotheek Noordwest Veluwe (v1.0, april 2026): wit, antraciet `#39373a`, oranje `#ec7404` en beige `#fde5d0`. Ze staan als tokens in `src/stijl/tokens.css`. **Antraciet** is de kleur voor tekst en knoppen. **Oranje** haalt op wit maar 2,97:1. Het is daarom alleen een merkaccent: de lijn boven de kop en de markering van het actieve menu-item. Het is nooit tekst, knop, zone of cijfer. **Beige** dient als markeerkleur. De subkleuren van de pijlers (Doe, Lees, …) gebruiken we niet: ze horen bij communicatie-uitingen en zouden in een planningsinstrument als betekenis worden gelezen.
+**Reden:** keuze van de eigenaar (BNWV-huisstijl), binnen WCAG 2.1 AA en de doelbinding (SPEC §1). `doelbinding.test.ts` staat het merkoranje alleen toe als token en alleen in kop en navigatie. Andere verzadigde rode, oranje of groene tinten worden geweigerd. `contrast.test.ts` controleert alle kleurparen in de lichte en de donkere modus.
+
+### 2026-10-17 · Donkere modus automatisch
+
+**Keuze:** de donkere modus volgt `prefers-color-scheme`. Er is geen schakelaar.
+**Reden:** keuze van de eigenaar. Zonder schakelaar hoeft er niets in `localStorage` (CLAUDE.md: alleen de sessie).
+
+### 2026-10-17 · Lettertype Plus Jakarta Sans, zelf gehost
+
+**Keuze:** Plus Jakarta Sans (huisstijlgids §4.1) als variabel woff2-bestand, alleen de Latijnse tekenset (27 kB), in `src/assets/lettertype/` met de licentie (`OFL.txt`). Fallback is Arial (§4.4). De bron is het npm-pakket `@fontsource-variable/plus-jakarta-sans@5.3.0`, alleen het bestand; het pakket zelf is geen dependency.
+**Reden:** de CSP staat geen lettertypen van andere domeinen toe (`font-src 'self'`). De SIL Open Font License staat zelf hosten toe.
+
+### 2026-10-17 · Interlinie 1,2 voor koppen, 1,5 voor lopende tekst
+
+**Keuze:** koppen krijgen een interlinie van 1,2 (huisstijlgids §4.2). Lopende tekst in de app krijgt 1,5.
+**Reden:** de gids is geschreven voor drukwerk en posters. Voor schermtekst met veel formulieren en tabellen leest 1,5 rustiger (vergelijk WCAG 1.4.12). Koppen zijn altijd links uitgelijnd, zoals de gids voorschrijft.
+
+### 2026-10-17 · Logo nog niet opgenomen
+
+**Keuze:** de kop toont voorlopig alleen de app-naam. Het logo komt erin zodra de officiële bestanden (SVG) zijn aangeleverd. We halen het niet uit de PDF.
+**Reden:** de huisstijlgids (§2.5) verbiedt het logo te wijzigen of na te tekenen. Alleen de originele bestanden zijn betrouwbaar.
+
+### 2026-10-17 · Eigen basiscomponenten, geen UI-framework
+
+**Keuze:** in `src/components/ui/` staan Knop, PictogramKnop, Melding, Toasts, Dialoog (ook als zijpaneel), Bevestiging (vervangt `window.confirm`), Kaart, LegeStaat, Badge, Laden en Pictogram. Dialoog en zijpaneel gebruiken het eigen `<dialog>`-element (`showModal`): de browser houdt de focus vast, maakt de rest van de pagina inert en sluit met Escape. Er zijn geen nieuwe runtime-dependencies. jsdom kent `showModal` niet; `src/test/setup.ts` bootst alleen `open` en het close-event na. Het echte gedrag is in de browser gecontroleerd via de galerij.
+**Reden:** CLAUDE.md (minimaal aantal dependencies) en volledige controle over toegankelijkheid en CSP.
+
+### 2026-10-17 · App-indeling met gegroepeerd menu
+
+**Keuze:** na inloggen staat het menu links, in de groepen _Overzichten_, _Beheer en import_ en _Jouw account_. Onder 64rem staat het menu boven de inhoud en klapt het in met een knop (`aria-expanded`, Escape sluit het). Menu en paginatitels komen uit één bron (`src/indeling/navigatie.ts`), die ook `document.title` zet. Na een keuze in het menu gaat de focus naar `<main>`. "Naar de inhoud" is een link met `preventDefault`, omdat `#inhoud` onder HashRouter anders een route wordt.
+**Reden:** oriëntatie en tabletgebruik (WCAG 2.4.1, 2.4.2 en 2.5.5: aanraakdoelen van minstens 44 px).
+
+### 2026-10-17 · Toegankelijkheidstests met axe-core
+
+**Keuze:** `axe-core@4.13.0` als dev-dependency, met een eigen kleine helper (`src/test/axe.ts`) in plaats van `vitest-axe`. Getoetst worden de regels voor WCAG 2.0 en 2.1 A/AA plus de best practices. Kleurcontrast kan jsdom niet berekenen; dat doet `contrast.test.ts` op de tokens. Versie 4.13.0 is gekozen omdat 4.14.0 jonger is dan twee weken.
+**Reden:** keuze van de eigenaar. Eén dependency minder dan met vitest-axe. axe-core zit alleen in de tests en niet in de app.
+
+### 2026-10-17 · Componentengalerij alleen in development
+
+**Keuze:** `#/voorbeelden` toont alle componenten met fictieve gegevens, zonder inloggen, maar alleen als `import.meta.env.DEV` waar is. CI controleert dat de galerij niet in `dist/` staat.
+**Reden:** schermen bekijken en screenshotten zonder account en zonder echte gegevens, terwijl de productiebuild er geen extra ingang bij krijgt.

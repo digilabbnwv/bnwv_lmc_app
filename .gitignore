@@ -12,6 +12,8 @@
 
 # --- Node / Vite ---
 node_modules/
+# Lokale, losse Node-installatie (niet in de repo)
+node_bin/
 dist/
 coverage/
 *.tsbuildinfo

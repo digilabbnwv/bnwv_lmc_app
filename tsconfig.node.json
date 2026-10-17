@@ -20,5 +20,5 @@
     "noFallthroughCasesInSwitch": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["vite.config.ts", "csp.ts", "csp.test.ts", "doelbinding.test.ts"]
+  "include": ["vite.config.ts", "csp.ts", "csp.test.ts", "doelbinding.test.ts", "contrast.test.ts"]
 }

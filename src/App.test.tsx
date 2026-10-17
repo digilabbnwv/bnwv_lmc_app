@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { DOELBINDING_TEKST } from './components/Doelbinding';
+import { toegankelijkheidsfouten } from './test/axe';
 
 const nep = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
@@ -61,6 +62,21 @@ describe('App zonder sessie', () => {
     toon();
     await screen.findByRole('heading', { name: 'Inloggen' });
     expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('"Naar de inhoud" zet de focus op main zonder de route te wijzigen', async () => {
+    toon();
+    await screen.findByRole('heading', { name: 'Inloggen' });
+    const main = screen.getByRole('main');
+    fireEvent.click(screen.getByRole('link', { name: 'Naar de inhoud' }));
+    expect(document.activeElement).toBe(main);
+    expect(screen.getByRole('heading', { name: 'Inloggen' })).toBeTruthy();
+  });
+
+  it('inlogscherm heeft geen toegankelijkheidsfouten (axe)', async () => {
+    toon();
+    await screen.findByRole('heading', { name: 'Inloggen' });
+    expect(await toegankelijkheidsfouten(document.body)).toEqual([]);
   });
 
   it('meldt een mislukte inlog zonder te zeggen wat er fout was', async () => {

@@ -40,6 +40,9 @@ jobs:
           if grep -Eq 'unsafe-inline|unsafe-eval' dist/index.html; then echo "::error::CSP bevat unsafe-inline of unsafe-eval"; exit 1; fi
           # Geen inline scripts: elk <script> moet een src hebben.
           if grep -Pq '<script(?![^>]*\bsrc=)[^>]*>' dist/index.html; then echo "::error::Inline script in index.html"; exit 1; fi
+      - name: Componentengalerij niet in de build
+        run: |
+          if grep -rq 'Componentengalerij' dist; then echo "::error::De galerij (alleen development) staat in de build"; exit 1; fi
 
   database:
     runs-on: ubuntu-latest
