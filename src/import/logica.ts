@@ -52,3 +52,42 @@ export function samenvatting(v: Voorvertoning): string[] {
   }
   return zinnen;
 }
+
+export type Stap = 1 | 2 | 3;
+
+/** Stap van de import: 1 bestand en periode, 2 controle, 3 verwerkt. */
+export function huidigeStap(voorvertoning: Voorvertoning | null, afgerond: boolean): Stap {
+  if (afgerond) return 3;
+  return voorvertoning ? 2 : 1;
+}
+
+/** Vraagt de voorvertoning nog iets van de gebruiker vóór definitief maken? */
+export function actieNodig(v: Voorvertoning): boolean {
+  return v.niet_gematcht.length > 0 || v.onbekende_artikelcodes.length > 0;
+}
+
+const iso = (d: Date) =>
+  `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** De hele vorige kalendermaand ten opzichte van `vandaag`. */
+export function vorigeMaand(vandaag: Date): { van: string; tot: string } {
+  const eerste = new Date(vandaag.getFullYear(), vandaag.getMonth() - 1, 1);
+  const laatste = new Date(vandaag.getFullYear(), vandaag.getMonth(), 0);
+  return { van: iso(eerste), tot: iso(laatste) };
+}
+
+/** Van het begin van het schooljaar tot en met gisteren (of het einde van het schooljaar). */
+export function schooljaarTotGisteren(
+  schooljaar: { startdatum: string; einddatum: string },
+  vandaag: Date,
+): { van: string; tot: string } | null {
+  const gisteren = iso(new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() - 1));
+  const tot = gisteren < schooljaar.einddatum ? gisteren : schooljaar.einddatum;
+  return tot < schooljaar.startdatum ? null : { van: schooljaar.startdatum, tot };
+}
+
+/** Bestandsgrootte voor mensen: "350 kB" of "1,2 MB". */
+export function bestandsgrootte(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${String(Math.max(1, Math.round(bytes / 1024)))} kB`;
+  return `${(bytes / (1024 * 1024)).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} MB`;
+}

@@ -11,6 +11,11 @@ interface DialoogProps {
   acties?: ReactNode;
   /** Dialoog in het midden, of een zijpaneel rechts (bewerken in beheer). */
   soort?: 'dialoog' | 'zijpaneel';
+  /**
+   * Voor een dialoog met meerdere stappen: bij een nieuwe waarde gaat de focus opnieuw
+   * naar het element met data-autofocus (de oude inhoud, met de focus, is dan weg).
+   */
+  stap?: string;
 }
 
 /**
@@ -26,6 +31,7 @@ export function Dialoog({
   children,
   acties,
   soort = 'dialoog',
+  stap,
 }: DialoogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const terug = useRef<HTMLElement | null>(null);
@@ -42,6 +48,13 @@ export function Dialoog({
       dialoog.close();
     }
   }, [open]);
+
+  useEffect(() => {
+    const dialoog = ref.current;
+    if (stap !== undefined && dialoog?.open) {
+      dialoog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }
+  }, [stap]);
 
   // Bij verdwijnen terwijl de dialoog open is: netjes sluiten.
   useEffect(() => {

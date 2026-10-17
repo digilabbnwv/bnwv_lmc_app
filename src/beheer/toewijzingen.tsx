@@ -1,9 +1,13 @@
 // Toewijzingen (SPEC §4, §5): wie werkt aan welk werkpakket in een schooljaar, met
 // welke uren en welke verdeling. De uren zelf rekent de database (toewijzing_uren).
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
+import { Melding } from '../components/ui/Melding';
+import type { Database } from '../lib/database.types';
+import { vertaalFout } from '../lib/fouten';
 import { supabase } from '../lib/supabase';
+import { useVertraagd } from '../lib/useVertraagd';
 import { formatUren } from '../lib/opmaak';
 import { BeheerScherm } from './BeheerScherm';
 import {
@@ -115,6 +119,98 @@ export function toewijzingSchema(
       looptijd_tot: t.verdeling === 'looptijd' ? t.looptijd_tot : null,
       datums: t.verdeling === 'op_datum' ? t.datums : [],
     }));
+}
+
+type ToewijzingSchema = ReturnType<typeof toewijzingSchema>;
+type VoorbeeldArgs = Database['public']['Functions']['toewijzing_voorbeeld']['Args'];
+
+/** Hoe de verdeling in woorden heet, met het aantal dagen. */
+export function verdelingZin(verdeling: Verdeling, dagen: number): string {
+  const n = dagen.toLocaleString('nl-NL');
+  if (verdeling === 'schoolweken') return `verdeeld over ${n} schoolweekdagen`;
+  if (verdeling === 'looptijd') return `verdeeld over ${n} werkdagen in de looptijd`;
+  return `verdeeld over ${n} ${dagen === 1 ? 'datum' : 'datums'}`;
+}
+
+/**
+ * Live rekenvoorbeeld onderaan het paneel. De database rekent met dezelfde regels als de
+ * planning (public.toewijzing_voorbeeld) en slaat niets op. Pas na 400 ms zonder wijziging
+ * en alleen bij geldige invoer.
+ */
+export function UrenVoorbeeld({
+  waarden,
+  bestaandId,
+  schema,
+  schooljaarId,
+}: {
+  waarden: Formulierwaarden;
+  bestaandId: string | null;
+  schema: ToewijzingSchema;
+  schooljaarId: string;
+}) {
+  const vertraagd = useVertraagd(waarden, 400);
+  const geldig = schema.safeParse(vertraagd);
+  const t = geldig.success ? geldig.data : null;
+  // De gegenereerde types kennen geen null-argumenten; de functie accepteert ze wel.
+  const args = t
+    ? ({
+        p_toewijzing_id: bestaandId,
+        p_medewerker_id: t.medewerker_id,
+        p_werkpakket_id: t.werkpakket_id,
+        p_schooljaar_id: schooljaarId,
+        p_bron: t.bron,
+        p_aandeel_percentage: t.aandeel_percentage,
+        p_aantal_keer: t.aantal_keer,
+        p_gepland_uitvoering: t.gepland_uitvoering,
+        p_gepland_voorbereiding: t.gepland_voorbereiding,
+        p_gepland_afronding: t.gepland_afronding,
+        p_verdeling: t.verdeling,
+        p_looptijd_van: t.looptijd_van,
+        p_looptijd_tot: t.looptijd_tot,
+        p_datums: t.datums,
+      } as unknown as VoorbeeldArgs)
+    : null;
+  const voorbeeld = useQuery({
+    queryKey: ['toewijzing_voorbeeld', args],
+    enabled: args !== null,
+    retry: false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const rijen = await ophalen(supabase().rpc('toewijzing_voorbeeld', args as VoorbeeldArgs));
+      return rijen[0] ?? null;
+    },
+  });
+
+  let inhoud: ReactNode;
+  if (!t) inhoud = 'Vul de gegevens in om te zien hoeveel uur dit oplevert.';
+  else if (voorbeeld.isError) inhoud = vertaalFout(voorbeeld.error);
+  else if (!voorbeeld.data) inhoud = 'Uren berekenen…';
+  else {
+    const r = voorbeeld.data;
+    inhoud = (
+      <>
+        <strong>≈ {formatUren(r.totaal)} uur</strong>, {verdelingZin(t.verdeling, r.aantal_dagen)}.
+        <br />
+        <span className="gedempt">
+          Uitvoering {formatUren(r.uitvoering)}, voorbereiding {formatUren(r.voorbereiding)},
+          afronding {formatUren(r.afronding)} uur.
+        </span>
+        {r.terugval ? (
+          <>
+            <br />
+            Er zijn geen geschikte dagen; de uren komen op de eerste dag.
+          </>
+        ) : null}
+      </>
+    );
+  }
+  return (
+    <div className="paneel-samenvatting">
+      <Melding titel="Wat levert dit op?">
+        <p>{inhoud}</p>
+      </Melding>
+    </div>
+  );
 }
 
 const getal = (n: number | null) => (n === null ? '' : n.toLocaleString('nl-NL'));
@@ -244,6 +340,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
       velden: [
         {
           naam: 'medewerker_id',
+          groep: 'Wie en wat',
           label: 'Medewerker',
           type: 'keuze',
           verplicht: true,
@@ -253,6 +350,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'werkpakket_id',
+          groep: 'Wie en wat',
           label: 'Werkpakket',
           type: 'keuze',
           verplicht: true,
@@ -262,6 +360,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'bron',
+          groep: 'Uren',
           label: 'Bron van de uren',
           type: 'keuze',
           verplicht: true,
@@ -270,6 +369,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'aandeel_percentage',
+          groep: 'Uren',
           label: 'Aandeel van de staffeluren (%)',
           type: 'getal',
           zichtbaar: isBron('staffel'),
@@ -277,6 +377,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'aantal_keer',
+          groep: 'Uren',
           label: 'Aantal keer',
           type: 'getal',
           verplicht: true,
@@ -284,6 +385,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'gepland_uitvoering',
+          groep: 'Uren',
           label: 'Uren uitvoering',
           type: 'getal',
           verplicht: true,
@@ -291,6 +393,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'gepland_voorbereiding',
+          groep: 'Uren',
           label: 'Uren voorbereiding',
           type: 'getal',
           verplicht: true,
@@ -298,6 +401,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'gepland_afronding',
+          groep: 'Uren',
           label: 'Uren afronding',
           type: 'getal',
           verplicht: true,
@@ -305,6 +409,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'verdeling',
+          groep: 'Verdeling',
           label: 'Verdeling',
           type: 'keuze',
           verplicht: true,
@@ -312,6 +417,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'looptijd_van',
+          groep: 'Verdeling',
           label: 'Looptijd vanaf',
           type: 'datum',
           verplicht: true,
@@ -319,6 +425,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'looptijd_tot',
+          groep: 'Verdeling',
           label: 'Looptijd tot en met',
           type: 'datum',
           verplicht: true,
@@ -326,6 +433,7 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         },
         {
           naam: 'datums',
+          groep: 'Verdeling',
           label: 'Datums',
           type: 'datumlijst',
           zichtbaar: isVerdeling('op_datum'),
@@ -392,6 +500,14 @@ export function Toewijzingen({ magBewerken }: { magBewerken: boolean }) {
         const { error } = await supabase().from('toewijzing').delete().eq('id', r.id);
         if (error) throw error;
       },
+      samenvatting: (w, b) => (
+        <UrenVoorbeeld
+          waarden={w}
+          bestaandId={b?.id ?? null}
+          schema={schema}
+          schooljaarId={schooljaar.id}
+        />
+      ),
       ookVernieuwen: [['toewijzing_extra', schooljaar.id], ['belasting']],
     };
     return definitie;

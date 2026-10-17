@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { BevestigingProvider } from '../components/ui/Bevestiging';
 import { ToastProvider } from '../components/ui/Toasts';
 import { toegankelijkheidsfouten } from '../test/axe';
-import { ALLEEN_INZIEN, BeheerScherm, kleineBeginletter } from './BeheerScherm';
+import { ALLEEN_INZIEN, BeheerScherm, groeperen, kleineBeginletter } from './BeheerScherm';
 import { v } from './schema';
 import type { BeheerDefinitie } from './types';
 
@@ -273,5 +273,39 @@ describe('kleineBeginletter', () => {
   it('maakt alleen gewone woorden klein', () => {
     expect(kleineBeginletter('Scholen')).toBe('scholen');
     expect(kleineBeginletter('MATT-artikelcodes')).toBe('MATT-artikelcodes');
+  });
+});
+
+describe('BeheerScherm: formulier in blokken en samenvatting', () => {
+  it('velden met een groep staan in een fieldset met legenda; samenvatting onder het formulier', async () => {
+    const { d } = definitie({
+      velden: [
+        { naam: 'naam', label: 'Naam', type: 'tekst', verplicht: true, groep: 'Wie en wat' },
+        { naam: 'uren', label: 'Uren', type: 'getal', verplicht: true, groep: 'Uren' },
+      ],
+      samenvatting: (w) => <p>Samenvatting: {String(w.naam)}</p>,
+    });
+    toon(d);
+    await screen.findByText('Alfa');
+    fireEvent.click(screen.getByRole('button', { name: 'Bewerken: Alfa' }));
+    const groep = screen.getByRole('group', { name: 'Wie en wat' });
+    expect(within(groep).getByLabelText(/Naam/)).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Uren' })).toBeTruthy();
+    expect(within(paneel()).getByText('Samenvatting: Alfa')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Naam/), { target: { value: 'Gamma' } });
+    expect(within(paneel()).getByText('Samenvatting: Gamma')).toBeTruthy();
+  });
+});
+
+describe('groeperen', () => {
+  it('voegt opeenvolgende velden van dezelfde groep samen', () => {
+    const veld = (naam: string, groep?: string) =>
+      ({ naam, label: naam, type: 'tekst', ...(groep ? { groep } : {}) }) as const;
+    const blokken = groeperen([veld('a', 'X'), veld('b', 'X'), veld('c'), veld('d', 'Y')]);
+    expect(blokken.map((b) => [b.groep, b.velden.map((v) => v.naam)])).toEqual([
+      ['X', ['a', 'b']],
+      [undefined, ['c']],
+      ['Y', ['d']],
+    ]);
   });
 });

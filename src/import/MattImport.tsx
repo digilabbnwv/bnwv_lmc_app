@@ -1,15 +1,33 @@
-// Scherm MATT-import (SPEC §8): uploaden, periode opgeven, voorvertoning, definitief
-// maken, verwerpen en terugdraaien. Het bestand blijft in de browser en gaat alleen
+// Scherm MATT-import (SPEC §8), in drie stappen: 1 bestand en periode, 2 controle
+// (voorvertoning, concept), 3 verwerkt. Het bestand blijft in de browser en gaat alleen
 // naar de Edge Function; het wordt nergens bewaard.
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { naamVan, ophalen, useMedewerkers } from '../beheer/data';
-import { functieFout, supabase } from '../lib/supabase';
+import { huidigSchooljaar, naamVan, ophalen, useMedewerkers, useSchooljaren } from '../beheer/data';
+import { useBevestig } from '../components/ui/Bevestiging';
+import { Badge, Kaart, LegeStaat } from '../components/ui/Kaart';
+import { Kerngetal, Kerngetallen } from '../components/ui/Kerngetal';
+import { Knop } from '../components/ui/Knop';
+import { Laden } from '../components/ui/Laden';
+import { Melding } from '../components/ui/Melding';
+import { Stappen } from '../components/ui/Stappen';
+import { useToast } from '../components/ui/Toasts';
 import { vertaalFout } from '../lib/fouten';
 import { formatDatum, formatUren } from '../lib/opmaak';
-import { useBevestig } from '../components/ui/Bevestiging';
-import { controleerBestand, controleerPeriode, samenvatting, type Voorvertoning } from './logica';
+import { functieFout, supabase } from '../lib/supabase';
+import {
+  actieNodig,
+  bestandsgrootte,
+  controleerBestand,
+  controleerPeriode,
+  huidigeStap,
+  schooljaarTotGisteren,
+  vorigeMaand,
+  type Voorvertoning,
+} from './logica';
+
+export const STAPPEN = ['Bestand en periode', 'Controle', 'Verwerkt'] as const;
 
 const STATUSNAAM = {
   concept: 'Concept',
@@ -69,123 +87,178 @@ function AliasToevoegen({ naam, onKlaar }: { naam: string; onKlaar: () => void }
             </option>
           ))}
       </select>
-      <button type="submit" className="secundair" disabled={!keuze}>
+      <Knop type="submit" variant="secundair" disabled={!keuze}>
         Alias toevoegen
-      </button>
+      </Knop>
       {fout ? <span role="alert">{fout}</span> : null}
     </form>
   );
 }
 
-function VoorvertoningWeergave({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
+/** Uitklapbaar blok met een telling; blokken die actie vragen staan standaard open. */
+function Blok({
+  titel,
+  aantal,
+  actie = false,
+  children,
+}: {
+  titel: string;
+  aantal: number;
+  actie?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="blok" open={actie}>
+      <summary>
+        {titel} <Badge nadruk={actie}>{aantal}</Badge>
+        {actie ? <span className="gedempt">actie nodig</span> : null}
+      </summary>
+      <div className="blok-inhoud">{children}</div>
+    </details>
+  );
+}
+
+function Controle({ v, onAlias }: { v: Voorvertoning; onAlias: () => void }) {
   const medewerkers = useMedewerkers();
   const naam = new Map((medewerkers.data ?? []).map((m) => [m.id, naamVan(m)]));
   return (
     <>
-      <ul className="lijst">
-        {samenvatting(v).map((z) => (
-          <li key={z}>{z}</li>
-        ))}
-      </ul>
+      <Kerngetallen>
+        <Kerngetal label="Boekingen in het bestand" waarde={String(v.bestand.regels)} />
+        <Kerngetal label="Worden opgeslagen" waarde={String(v.opgeslagen.aantal)} />
+        <Kerngetal label="Uren" waarde={formatUren(v.opgeslagen.uren)} eenheid="uur" />
+        <Kerngetal label="Medewerkers" waarde={String(v.medewerkers.length)} />
+      </Kerngetallen>
 
-      <h4>Gekoppelde medewerkers</h4>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Medewerker</th>
-            <th scope="col" className="numeriek">
-              Boekingen
-            </th>
-            <th scope="col" className="numeriek">
-              Uren
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {v.medewerkers.map((m) => (
-            <tr key={m.medewerker_id}>
-              <td>{naam.get(m.medewerker_id) ?? 'Medewerker'}</td>
-              <td className="numeriek">{m.aantal}</td>
-              <td className="numeriek">{formatUren(m.uren)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {actieNodig(v) ? (
+        <Melding soort="let-op" titel="Er is nog iets van je nodig">
+          <ul className="lijst">
+            {v.niet_gematcht.length > 0 ? (
+              <li>
+                {v.niet_gematcht_aantal} boekingen horen bij een naam zonder alias en worden niet
+                opgeslagen. Koppel de naam hieronder, of laat hem staan als het geen medewerker van
+                het team is.
+              </li>
+            ) : null}
+            {v.onbekende_artikelcodes.length > 0 ? (
+              <li>
+                Er zijn artikelcodes zonder categorie. Vul ze aan bij{' '}
+                <Link to="/beheer/artikelcodes">MATT-artikelcodes</Link>.
+              </li>
+            ) : null}
+          </ul>
+          <p>Klik daarna op &quot;Opnieuw controleren&quot;.</p>
+        </Melding>
+      ) : (
+        <Melding soort="gelukt" titel="Alles is gekoppeld">
+          Controleer de aantallen en maak de import definitief.
+        </Melding>
+      )}
 
       {v.niet_gematcht.length > 0 ? (
-        <>
-          <h4>Namen zonder alias (worden niet opgeslagen)</h4>
-          <p className="toelichting">
-            Koppel een naam aan een medewerker en controleer daarna opnieuw. Komt de naam niet van
-            een medewerker van het team, laat hem dan staan.
-          </p>
+        <Blok titel="Namen zonder alias" aantal={v.niet_gematcht.length} actie>
+          <div className="tabel-schuif">
+            <table>
+              <caption className="verborgen">Namen zonder alias</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Naam in MATT</th>
+                  <th scope="col" className="numeriek">
+                    Boekingen
+                  </th>
+                  <th scope="col" className="numeriek">
+                    Uren
+                  </th>
+                  <th scope="col">Koppelen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {v.niet_gematcht.map((n) => (
+                  <tr key={n.naam}>
+                    <th scope="row">{n.naam}</th>
+                    <td className="numeriek">{n.aantal}</td>
+                    <td className="numeriek">{formatUren(n.uren)}</td>
+                    <td>
+                      <AliasToevoegen naam={n.naam} onKlaar={onAlias} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Blok>
+      ) : null}
+
+      {v.onbekende_artikelcodes.length > 0 ? (
+        <Blok titel="Artikelcodes zonder categorie" aantal={v.onbekende_artikelcodes.length} actie>
+          <ul className="lijst">
+            {v.onbekende_artikelcodes.map((a) => (
+              <li key={a.artikelcode}>
+                {a.artikelcode} ({a.aantal}×)
+              </li>
+            ))}
+          </ul>
+        </Blok>
+      ) : null}
+
+      <Blok titel="Gekoppelde medewerkers" aantal={v.medewerkers.length}>
+        <div className="tabel-schuif">
           <table>
+            <caption className="verborgen">Gekoppelde medewerkers</caption>
             <thead>
               <tr>
-                <th scope="col">Naam in MATT</th>
+                <th scope="col">Medewerker</th>
                 <th scope="col" className="numeriek">
                   Boekingen
                 </th>
                 <th scope="col" className="numeriek">
                   Uren
                 </th>
-                <th scope="col">Koppelen</th>
               </tr>
             </thead>
             <tbody>
-              {v.niet_gematcht.map((n) => (
-                <tr key={n.naam}>
-                  <td>{n.naam}</td>
-                  <td className="numeriek">{n.aantal}</td>
-                  <td className="numeriek">{formatUren(n.uren)}</td>
-                  <td>
-                    <AliasToevoegen naam={n.naam} onKlaar={onAlias} />
-                  </td>
+              {v.medewerkers.map((m) => (
+                <tr key={m.medewerker_id}>
+                  <th scope="row">{naam.get(m.medewerker_id) ?? 'Medewerker'}</th>
+                  <td className="numeriek">{m.aantal}</td>
+                  <td className="numeriek">{formatUren(m.uren)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </>
-      ) : null}
+        </div>
+      </Blok>
 
       {v.niet_gekoppelde_projecten.length > 0 ? (
-        <>
-          <h4>MATT-projecten zonder werkpakket</h4>
+        <Blok titel="MATT-projecten zonder werkpakket" aantal={v.niet_gekoppelde_projecten.length}>
           <p className="toelichting">
-            Deze boekingen worden wél opgeslagen. Koppel de projecten bij{' '}
+            Deze boekingen worden wél opgeslagen. Koppel de projecten later bij{' '}
             <Link to="/beheer/matt-projecten">MATT-projecten</Link>.
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Nummer</th>
-                <th scope="col">Naam in MATT</th>
-                <th scope="col" className="numeriek">
-                  Uren
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {v.niet_gekoppelde_projecten.map((p) => (
-                <tr key={p.projectnummer}>
-                  <td>{p.projectnummer}</td>
-                  <td>{p.naam ?? ''}</td>
-                  <td className="numeriek">{formatUren(p.uren)}</td>
+          <div className="tabel-schuif">
+            <table>
+              <caption className="verborgen">MATT-projecten zonder werkpakket</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Nummer</th>
+                  <th scope="col">Naam in MATT</th>
+                  <th scope="col" className="numeriek">
+                    Uren
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      ) : null}
-
-      {v.onbekende_artikelcodes.length > 0 ? (
-        <p role="note">
-          Artikelcodes zonder categorie:{' '}
-          {v.onbekende_artikelcodes
-            .map((a) => `${a.artikelcode} (${String(a.aantal)}×)`)
-            .join(', ')}
-          . Vul ze aan bij <Link to="/beheer/artikelcodes">MATT-artikelcodes</Link>.
-        </p>
+              </thead>
+              <tbody>
+                {v.niet_gekoppelde_projecten.map((p) => (
+                  <tr key={p.projectnummer}>
+                    <th scope="row">{p.projectnummer}</th>
+                    <td>{p.naam ?? ''}</td>
+                    <td className="numeriek">{formatUren(p.uren)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Blok>
       ) : null}
     </>
   );
@@ -193,8 +266,8 @@ function VoorvertoningWeergave({ v, onAlias }: { v: Voorvertoning; onAlias: () =
 
 function Historie() {
   const bevestig = useBevestig();
+  const toon = useToast();
   const queryClient = useQueryClient();
-  const [melding, setMelding] = useState<string | null>(null);
   const imports = useQuery({
     queryKey: ['matt_import'],
     queryFn: () =>
@@ -216,25 +289,23 @@ function Historie() {
       return soort;
     },
     onSuccess: async (soort) => {
-      setMelding(
-        soort === 'terugdraaien' ? 'De import is teruggedraaid.' : 'Het concept is verworpen.',
-      );
+      toon(soort === 'terugdraaien' ? 'De import is teruggedraaid.' : 'Het concept is verworpen.');
       await queryClient.invalidateQueries({ queryKey: ['matt_import'] });
-    },
-    onError: (e) => {
-      setMelding(vertaalFout(e));
+      await queryClient.invalidateQueries({ queryKey: ['belasting'] });
     },
   });
 
   return (
     <section aria-labelledby="historie-titel">
       <h3 id="historie-titel">Eerdere imports</h3>
-      <p role="status" aria-live="polite">
-        {melding ?? ''}
-      </p>
-      {imports.data ? (
-        <div className="tabel-schuif">
+      {actie.isError ? <Melding soort="fout">{vertaalFout(actie.error)}</Melding> : null}
+      {imports.isPending ? <Laden /> : null}
+      {imports.isError ? <Melding soort="fout">{vertaalFout(imports.error)}</Melding> : null}
+      {imports.data && imports.data.length === 0 ? <LegeStaat titel="Nog geen imports" /> : null}
+      {imports.data && imports.data.length > 0 ? (
+        <div className="tabel-schuif tabel-vast">
           <table>
+            <caption className="verborgen">Eerdere imports</caption>
             <thead>
               <tr>
                 <th scope="col">Geïmporteerd op</th>
@@ -261,14 +332,15 @@ function Historie() {
                     <td>
                       {formatDatum(i.periode_van)} – {formatDatum(i.periode_tot)}
                     </td>
-                    <td>{STATUSNAAM[i.status]}</td>
+                    <td>
+                      <Badge nadruk={i.status === 'concept'}>{STATUSNAAM[i.status]}</Badge>
+                    </td>
                     <td className="numeriek">{aantal ?? ''}</td>
                     <td className="numeriek">{formatUren(i.totaal_uren)}</td>
-                    <td>
+                    <td className="actie">
                       {i.status === 'definitief' ? (
-                        <button
-                          type="button"
-                          className="secundair"
+                        <Knop
+                          variant="secundair"
                           disabled={actie.isPending}
                           onClick={() => {
                             void bevestig({
@@ -282,18 +354,17 @@ function Historie() {
                           }}
                         >
                           Terugdraaien
-                        </button>
+                        </Knop>
                       ) : i.status === 'concept' ? (
-                        <button
-                          type="button"
-                          className="secundair"
+                        <Knop
+                          variant="secundair"
                           disabled={actie.isPending}
                           onClick={() => {
                             actie.mutate({ id: i.id, soort: 'verwerpen' });
                           }}
                         >
                           Verwerpen
-                        </button>
+                        </Knop>
                       ) : null}
                     </td>
                   </tr>
@@ -310,16 +381,32 @@ function Historie() {
 export function MattImport() {
   const bevestig = useBevestig();
   const queryClient = useQueryClient();
+  const schooljaren = useSchooljaren();
   const bestandId = useId();
+  const titelId = useId();
   const [bestand, setBestand] = useState<File | null>(null);
   const [van, setVan] = useState('');
   const [tot, setTot] = useState('');
   const [fout, setFout] = useState<string | null>(null);
-  const [melding, setMelding] = useState<string | null>(null);
   const [voorvertoning, setVoorvertoning] = useState<Voorvertoning | null>(null);
+  const [afgerond, setAfgerond] = useState<{
+    soort: 'definitief' | 'verworpen';
+    aantal: number;
+  } | null>(null);
+  const [aliasToegevoegd, setAliasToegevoegd] = useState(false);
   const xml = useRef<string | null>(null);
+  const stapTitel = useRef<HTMLHeadingElement>(null);
+
+  const stap = huidigeStap(voorvertoning, afgerond !== null);
+  const vandaag = new Date();
+  const schooljaar = huidigSchooljaar(schooljaren.data);
+  const ditSchooljaar = schooljaar ? schooljaarTotGisteren(schooljaar, vandaag) : null;
 
   const vernieuwHistorie = () => queryClient.invalidateQueries({ queryKey: ['matt_import'] });
+  const naarStap = () => {
+    // Na een stapwissel: focus naar de kop van de nieuwe stap.
+    setTimeout(() => stapTitel.current?.focus(), 0);
+  };
 
   const controleren = useMutation({
     mutationFn: async () => {
@@ -332,7 +419,9 @@ export function MattImport() {
     },
     onSuccess: async (v) => {
       setVoorvertoning(v);
+      setAliasToegevoegd(false);
       setFout(null);
+      naarStap();
       await vernieuwHistorie();
     },
     onError: (e) => {
@@ -354,10 +443,14 @@ export function MattImport() {
       return soort;
     },
     onSuccess: async (soort) => {
-      setMelding(soort === 'definitief' ? 'De import is definitief.' : 'Het concept is verworpen.');
+      setAfgerond({
+        soort: soort === 'definitief' ? 'definitief' : 'verworpen',
+        aantal: voorvertoning?.opgeslagen.aantal ?? 0,
+      });
       setVoorvertoning(null);
       setBestand(null);
       xml.current = null;
+      naarStap();
       await vernieuwHistorie();
       await queryClient.invalidateQueries({ queryKey: ['belasting'] });
     },
@@ -366,90 +459,144 @@ export function MattImport() {
     },
   });
 
+  function opnieuwBeginnen() {
+    setAfgerond(null);
+    setFout(null);
+    setVan('');
+    setTot('');
+    naarStap();
+  }
+
   return (
-    <section aria-labelledby="import-titel">
-      <h2 id="import-titel">MATT-import</h2>
+    <section aria-labelledby={titelId}>
+      <h2 id={titelId}>MATT-import</h2>
       <p className="toelichting">
         Upload de export &quot;Project uren per projectmanager status&quot; (XML) en geef de periode
         op waarover de export gaat. Het bestand wordt alleen gecontroleerd en verwerkt, niet
         bewaard.
       </p>
 
-      <form
-        className="kader"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setMelding(null);
-          const probleem = controleerBestand(bestand) ?? controleerPeriode(van, tot);
-          if (probleem) {
-            setFout(probleem);
-            return;
-          }
-          controleren.mutate();
-        }}
-      >
-        <div className="veld">
-          <label htmlFor={bestandId} className="veld-label">
-            MATT-export (XML, maximaal 10 MB)
-          </label>
-          <input
-            id={bestandId}
-            type="file"
-            accept=".xml,text/xml,application/xml"
-            onChange={(e) => {
-              setBestand(e.target.files?.[0] ?? null);
-              xml.current = null;
-              setVoorvertoning(null);
-            }}
-          />
-        </div>
-        <label>
-          Periode vanaf
-          <input
-            type="date"
-            required
-            value={van}
-            onChange={(e) => {
-              setVan(e.target.value);
-            }}
-          />
-        </label>
-        <label>
-          Periode tot en met
-          <input
-            type="date"
-            required
-            value={tot}
-            onChange={(e) => {
-              setTot(e.target.value);
-            }}
-          />
-        </label>
-        <p className="melding" role="alert">
-          {fout ?? ''}
-        </p>
-        <button type="submit" disabled={controleren.isPending}>
-          {voorvertoning ? 'Opnieuw controleren' : 'Controleren'}
-        </button>
-      </form>
+      <Stappen stappen={STAPPEN} huidig={stap} />
+      <h3 ref={stapTitel} tabIndex={-1}>
+        Stap {stap} van {STAPPEN.length}: {STAPPEN[stap - 1]}
+      </h3>
 
-      <p className="melding-ok" role="status" aria-live="polite">
-        {melding ?? ''}
-      </p>
+      {fout ? <Melding soort="fout">{fout}</Melding> : null}
 
-      {voorvertoning ? (
-        <section className="kader" aria-labelledby="voorvertoning-titel">
-          <h3 id="voorvertoning-titel">Voorvertoning (concept)</h3>
-          <VoorvertoningWeergave
+      {stap === 1 ? (
+        <Kaart>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              const probleem = controleerBestand(bestand) ?? controleerPeriode(van, tot);
+              if (probleem) {
+                setFout(probleem);
+                return;
+              }
+              controleren.mutate();
+            }}
+          >
+            <div className="veld">
+              <label htmlFor={bestandId} className="veld-label">
+                MATT-export (XML, maximaal 10 MB)
+              </label>
+              <input
+                id={bestandId}
+                type="file"
+                accept=".xml,text/xml,application/xml"
+                onChange={(e) => {
+                  setBestand(e.target.files?.[0] ?? null);
+                  xml.current = null;
+                }}
+              />
+              {bestand ? (
+                <p className="bestand-info">
+                  Gekozen: {bestand.name} · {bestandsgrootte(bestand.size)}
+                </p>
+              ) : null}
+            </div>
+            <fieldset className="veldgroep">
+              <legend>Periode van de export</legend>
+              <div className="periode-velden">
+                <label>
+                  Vanaf
+                  <input
+                    type="date"
+                    required
+                    value={van}
+                    onChange={(e) => {
+                      setVan(e.target.value);
+                    }}
+                  />
+                </label>
+                <label>
+                  Tot en met
+                  <input
+                    type="date"
+                    required
+                    value={tot}
+                    onChange={(e) => {
+                      setTot(e.target.value);
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="knoppen">
+                <Knop
+                  variant="secundair"
+                  onClick={() => {
+                    const p = vorigeMaand(new Date());
+                    setVan(p.van);
+                    setTot(p.tot);
+                  }}
+                >
+                  Vorige maand
+                </Knop>
+                {ditSchooljaar ? (
+                  <Knop
+                    variant="secundair"
+                    onClick={() => {
+                      setVan(ditSchooljaar.van);
+                      setTot(ditSchooljaar.tot);
+                    }}
+                  >
+                    Dit schooljaar t/m gisteren
+                  </Knop>
+                ) : null}
+              </div>
+            </fieldset>
+            <div className="knoppen">
+              <Knop type="submit" bezig={controleren.isPending}>
+                Controleren
+              </Knop>
+            </div>
+          </form>
+        </Kaart>
+      ) : null}
+
+      {stap === 2 && voorvertoning ? (
+        <>
+          <p className="gedempt">
+            {bestand?.name ?? 'Bestand'} · periode {formatDatum(van)} – {formatDatum(tot)} · dit is
+            nog een concept.
+          </p>
+          {aliasToegevoegd ? (
+            <Melding soort="gelukt">
+              Alias toegevoegd. Klik op &quot;Opnieuw controleren&quot; om de boekingen mee te
+              nemen.
+            </Melding>
+          ) : null}
+          <Controle
             v={voorvertoning}
             onAlias={() => {
-              setMelding('Alias toegevoegd. Klik op "Opnieuw controleren".');
+              setAliasToegevoegd(true);
             }}
           />
           <div className="knoppen">
-            <button
-              type="button"
-              disabled={afronden.isPending}
+            <Knop
+              bezig={afronden.isPending && afronden.variables === 'definitief'}
+              disabled={afronden.isPending || controleren.isPending}
               onClick={() => {
                 void bevestig({
                   titel: 'Import definitief maken?',
@@ -462,19 +609,45 @@ export function MattImport() {
               }}
             >
               Definitief maken
-            </button>
-            <button
-              type="button"
-              className="secundair"
+            </Knop>
+            <Knop
+              variant="secundair"
+              bezig={controleren.isPending}
               disabled={afronden.isPending}
+              onClick={() => {
+                controleren.mutate();
+              }}
+            >
+              Opnieuw controleren
+            </Knop>
+            <Knop
+              variant="secundair"
+              disabled={afronden.isPending || controleren.isPending}
               onClick={() => {
                 afronden.mutate('verwerpen');
               }}
             >
               Verwerpen
-            </button>
+            </Knop>
           </div>
-        </section>
+        </>
+      ) : null}
+
+      {stap === 3 && afgerond ? (
+        <>
+          {afgerond.soort === 'definitief' ? (
+            <Melding soort="gelukt" titel="De import is definitief">
+              <p>
+                {afgerond.aantal} boekingen zijn verwerkt. Bekijk het resultaat bij{' '}
+                <Link to="/team">Teamoverzicht</Link> of{' '}
+                <Link to="/gepland-gerealiseerd">Gepland en gerealiseerd</Link>.
+              </p>
+            </Melding>
+          ) : (
+            <Melding titel="Het concept is verworpen">Er is niets opgeslagen.</Melding>
+          )}
+          <Knop onClick={opnieuwBeginnen}>Nieuwe import</Knop>
+        </>
       ) : null}
 
       <Historie />

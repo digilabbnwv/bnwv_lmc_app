@@ -1,7 +1,16 @@
-import { useState } from 'react';
+// Accounts aanmaken en resetten (manager en beheerder; SPEC §6, §7). Aanmaken en resetten
+// gaan in een dialoog die doorloopt naar de wachtwoordstap. Het tijdelijke wachtwoord staat
+// alleen in de state van die dialoog en verdwijnt bij sluiten: nooit in een toast, URL,
+// localStorage of console.
+import { useId, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth, type Rol } from '../auth/AuthContext';
 import { useBevestig } from '../components/ui/Bevestiging';
+import { Dialoog } from '../components/ui/Dialoog';
+import { Badge, LegeStaat } from '../components/ui/Kaart';
+import { Knop } from '../components/ui/Knop';
+import { Laden } from '../components/ui/Laden';
+import { Melding } from '../components/ui/Melding';
 import { roepFunctieAan, supabase } from '../lib/supabase';
 
 const ROLNAMEN: Record<Rol, string> = {
@@ -12,13 +21,39 @@ const ROLNAMEN: Record<Rol, string> = {
 };
 const ALLE_ROLLEN = Object.keys(ROLNAMEN) as Rol[];
 
-interface Rij {
+export interface Rij {
   medewerkerId: string;
   naam: string;
   email: string;
   actief: boolean;
   gebruikerId: string | null;
   rollen: Rol[];
+}
+
+export type AccountFilter = 'alle' | 'met' | 'zonder' | 'inactief';
+
+const FILTERS: { waarde: AccountFilter; label: string }[] = [
+  { waarde: 'alle', label: 'Alle medewerkers' },
+  { waarde: 'met', label: 'Met account' },
+  { waarde: 'zonder', label: 'Zonder account' },
+  { waarde: 'inactief', label: 'Niet actief' },
+];
+
+/** Zoeken op naam of e-mail en filteren op status. */
+export function filterAccounts(rijen: Rij[], zoek: string, filter: AccountFilter): Rij[] {
+  const term = zoek.trim().toLocaleLowerCase('nl');
+  return rijen.filter((r) => {
+    const past =
+      !term ||
+      r.naam.toLocaleLowerCase('nl').includes(term) ||
+      r.email.toLocaleLowerCase('nl').includes(term);
+    const status =
+      filter === 'alle' ||
+      (filter === 'met' && r.gebruikerId !== null) ||
+      (filter === 'zonder' && r.gebruikerId === null && r.actief) ||
+      (filter === 'inactief' && !r.actief);
+    return past && status;
+  });
 }
 
 async function laadRijen(): Promise<Rij[]> {
@@ -45,37 +80,86 @@ async function laadRijen(): Promise<Rij[]> {
   });
 }
 
-interface Resultaat {
-  naam: string;
-  wachtwoord: string;
+function Status({ rij }: { rij: Rij }) {
+  if (!rij.actief) return <Badge>Niet actief</Badge>;
+  return rij.gebruikerId ? <Badge nadruk>Account</Badge> : <Badge>Geen account</Badge>;
 }
 
-/** Accounts aanmaken en resetten (manager en beheerder; SPEC §6, §7). */
+type Stap =
+  | { soort: 'aanmaken'; rij: Rij }
+  | { soort: 'resetten'; rij: Rij }
+  | { soort: 'wachtwoord'; rij: Rij; wachtwoord: string };
+
+/** Tijdelijk wachtwoord met kopieerknop en een melding of kopiëren gelukt is. */
+function Wachtwoord({ wachtwoord }: { wachtwoord: string }) {
+  const code = useRef<HTMLElement>(null);
+  const [status, setStatus] = useState('');
+
+  async function kopieer() {
+    try {
+      await navigator.clipboard.writeText(wachtwoord);
+      setStatus('Gekopieerd.');
+    } catch {
+      // Geen toegang tot het klembord: selecteer de tekst, zodat Ctrl+C werkt.
+      const selectie = window.getSelection();
+      if (code.current && selectie) {
+        const bereik = document.createRange();
+        bereik.selectNodeContents(code.current);
+        selectie.removeAllRanges();
+        selectie.addRange(bereik);
+      }
+      setStatus('Kopiëren lukte niet. Het wachtwoord is geselecteerd: gebruik Ctrl+C.');
+    }
+  }
+
+  return (
+    <>
+      <p className="wachtwoord-vak">
+        <code ref={code} className="geheim">
+          {wachtwoord}
+        </code>
+      </p>
+      <p className="knoppen">
+        <Knop
+          variant="secundair"
+          data-autofocus
+          onClick={() => {
+            void kopieer();
+          }}
+        >
+          Kopiëren
+        </Knop>
+        <span role="status" className="gedempt">
+          {status}
+        </span>
+      </p>
+    </>
+  );
+}
+
 export function Accounts() {
   const bevestig = useBevestig();
   const { gebruiker, rollen: eigenRollen } = useAuth();
   const queryClient = useQueryClient();
   const rijen = useQuery({ queryKey: ['accounts'], queryFn: laadRijen });
-  const [keuze, setKeuze] = useState<Record<string, Rol[]>>({});
-  const [resultaat, setResultaat] = useState<Resultaat | null>(null);
-  const [fout, setFout] = useState<string | null>(null);
+  const [zoek, setZoek] = useState('');
+  const [filter, setFilter] = useState<AccountFilter>('alle');
+  const [stap, setStap] = useState<Stap | null>(null);
+  const [rollen, setRollen] = useState<Rol[]>([]);
   const isBeheerder = eigenRollen.includes('beheerder');
+  const rolfoutId = useId();
 
   const aanmaken = useMutation({
     mutationFn: async (rij: Rij) => {
       const data = await roepFunctieAan<{ tijdelijk_wachtwoord: string }>('gebruiker-aanmaken', {
         medewerker_id: rij.medewerkerId,
-        rollen: keuze[rij.medewerkerId] ?? [],
+        rollen,
       });
-      return { naam: rij.naam, wachtwoord: data.tijdelijk_wachtwoord };
+      return { rij, wachtwoord: data.tijdelijk_wachtwoord };
     },
-    onSuccess: (r) => {
-      setResultaat(r);
-      setFout(null);
+    onSuccess: ({ rij, wachtwoord }) => {
+      setStap({ soort: 'wachtwoord', rij, wachtwoord });
       void queryClient.invalidateQueries({ queryKey: ['accounts'] });
-    },
-    onError: (e) => {
-      setFout(e.message);
     },
   });
 
@@ -84,153 +168,277 @@ export function Accounts() {
       const data = await roepFunctieAan<{ tijdelijk_wachtwoord: string }>('account-resetten', {
         gebruiker_id: rij.gebruikerId,
       });
-      return { naam: rij.naam, wachtwoord: data.tijdelijk_wachtwoord };
+      return { rij, wachtwoord: data.tijdelijk_wachtwoord };
     },
-    onSuccess: (r) => {
-      setResultaat(r);
-      setFout(null);
-    },
-    onError: (e) => {
-      setFout(e.message);
+    onSuccess: ({ rij, wachtwoord }) => {
+      setStap({ soort: 'wachtwoord', rij, wachtwoord });
     },
   });
 
-  function wisselRol(medewerkerId: string, rol: Rol) {
-    setKeuze((huidig) => {
-      const lijst = huidig[medewerkerId] ?? [];
-      return {
-        ...huidig,
-        [medewerkerId]: lijst.includes(rol) ? lijst.filter((r) => r !== rol) : [...lijst, rol],
-      };
-    });
+  function open(nieuw: Stap) {
+    aanmaken.reset();
+    resetten.reset();
+    setRollen([]);
+    setStap(nieuw);
   }
+
+  function sluit() {
+    // Het wachtwoord verdwijnt met de state; ook uit de mutation-cache van TanStack Query.
+    setStap(null);
+    setRollen([]);
+    aanmaken.reset();
+    resetten.reset();
+  }
+
+  async function probeerSluiten() {
+    if (stap?.soort === 'wachtwoord') {
+      const ja = await bevestig({
+        titel: 'Wachtwoord sluiten?',
+        tekst:
+          'Het wachtwoord wordt daarna niet meer getoond. Heb je het nog niet doorgegeven, dan moet je het account opnieuw resetten.',
+        bevestigTekst: 'Sluiten',
+      });
+      if (!ja) return;
+    }
+    sluit();
+  }
+
+  const getoond = useMemo(
+    () => filterAccounts(rijen.data ?? [], zoek, filter),
+    [rijen.data, zoek, filter],
+  );
+  const gefilterd = zoek.trim() !== '' || filter !== 'alle';
+  const fout = aanmaken.error ?? resetten.error;
+  const kiesbareRollen = ALLE_ROLLEN.filter((r) => r !== 'beheerder' || isBeheerder);
+
+  const titel =
+    stap === null
+      ? ''
+      : stap.soort === 'aanmaken'
+        ? `Account aanmaken voor ${stap.rij.naam}`
+        : stap.soort === 'resetten'
+          ? `Account van ${stap.rij.naam} resetten`
+          : `Tijdelijk wachtwoord voor ${stap.rij.naam}`;
 
   return (
     <section aria-labelledby="accounts-titel">
       <h2 id="accounts-titel">Accounts</h2>
+      <p className="toelichting">
+        Maak een account aan voor een medewerker, of reset een account als iemand zijn wachtwoord of
+        toestel kwijt is. Het tijdelijke wachtwoord geef je persoonlijk door.
+      </p>
 
-      {resultaat ? (
-        <div className="kader" role="status">
-          <h3>Tijdelijk wachtwoord voor {resultaat.naam}</h3>
-          <p>
-            Geef dit wachtwoord persoonlijk door. Het wordt <strong>maar één keer</strong> getoond.
-            Bij de eerste keer inloggen kiest de medewerker een eigen wachtwoord en koppelt een
-            authenticator-app.
-          </p>
-          <p>
-            <code className="geheim">{resultaat.wachtwoord}</code>{' '}
-            <button
-              type="button"
-              className="secundair"
-              onClick={() => {
-                void navigator.clipboard.writeText(resultaat.wachtwoord);
-              }}
-            >
-              Kopiëren
-            </button>
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setResultaat(null);
+      <div className="overzicht-balk">
+        <label className="veld">
+          <span className="veld-label">Zoeken op naam of e-mail</span>
+          <input
+            type="search"
+            value={zoek}
+            onChange={(e) => {
+              setZoek(e.target.value);
+            }}
+          />
+        </label>
+        <label className="veld">
+          <span className="veld-label">Toon</span>
+          <select
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value as AccountFilter);
             }}
           >
-            Ik heb het wachtwoord doorgegeven
-          </button>
+            {FILTERS.map((f) => (
+              <option key={f.waarde} value={f.waarde}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {rijen.data ? (
+          <p className="telling gedempt" aria-live="polite">
+            {gefilterd
+              ? `${String(getoond.length)} van ${String(rijen.data.length)} medewerkers`
+              : `${String(rijen.data.length)} medewerkers`}
+          </p>
+        ) : null}
+      </div>
+
+      {rijen.isPending ? <Laden /> : null}
+      {rijen.isError ? (
+        <Melding soort="fout">De accounts konden niet worden geladen.</Melding>
+      ) : null}
+      {rijen.data && getoond.length === 0 ? (
+        <LegeStaat titel="Geen medewerkers gevonden">
+          {gefilterd ? 'Pas je zoekterm of filter aan.' : 'Voeg eerst medewerkers toe bij Beheer.'}
+        </LegeStaat>
+      ) : null}
+      {getoond.length > 0 ? (
+        <div className="tabel-schuif tabel-vast">
+          <table>
+            <caption className="verborgen">Accounts</caption>
+            <thead>
+              <tr>
+                <th scope="col">Medewerker</th>
+                <th scope="col">Status</th>
+                <th scope="col">Rollen</th>
+                <th scope="col">
+                  <span className="verborgen">Actie</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {getoond.map((rij) => {
+                const eigen = rij.gebruikerId !== null && rij.gebruikerId === gebruiker?.id;
+                return (
+                  <tr key={rij.medewerkerId}>
+                    <th scope="row">
+                      {rij.naam}
+                      <br />
+                      <span className="gedempt">{rij.email}</span>
+                    </th>
+                    <td>
+                      <Status rij={rij} />
+                    </td>
+                    <td>
+                      {rij.rollen.length > 0 ? (
+                        <span className="badges">
+                          {rij.rollen.map((r) => (
+                            <Badge key={r}>{ROLNAMEN[r]}</Badge>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="gedempt">—</span>
+                      )}
+                    </td>
+                    <td className="actie">
+                      {rij.gebruikerId ? (
+                        <Knop
+                          variant="secundair"
+                          disabled={eigen}
+                          title={eigen ? 'Je kunt je eigen account niet resetten.' : undefined}
+                          aria-label={`Account van ${rij.naam} resetten`}
+                          onClick={() => {
+                            open({ soort: 'resetten', rij });
+                          }}
+                        >
+                          Resetten
+                        </Knop>
+                      ) : rij.actief ? (
+                        <Knop
+                          aria-label={`Account aanmaken voor ${rij.naam}`}
+                          onClick={() => {
+                            open({ soort: 'aanmaken', rij });
+                          }}
+                        >
+                          Account aanmaken
+                        </Knop>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : null}
 
-      <p className="melding" role="alert" aria-live="assertive">
-        {fout ?? ''}
-      </p>
+      <Dialoog
+        open={stap !== null}
+        stap={stap?.soort ?? 'dicht'}
+        titel={titel}
+        opSluiten={() => {
+          void probeerSluiten();
+        }}
+        acties={
+          stap?.soort === 'aanmaken' ? (
+            <>
+              <Knop variant="secundair" onClick={sluit}>
+                Annuleren
+              </Knop>
+              <Knop
+                bezig={aanmaken.isPending}
+                disabled={rollen.length === 0}
+                aria-describedby={rollen.length === 0 ? rolfoutId : undefined}
+                onClick={() => {
+                  aanmaken.mutate(stap.rij);
+                }}
+              >
+                Account aanmaken
+              </Knop>
+            </>
+          ) : stap?.soort === 'resetten' ? (
+            <>
+              <Knop variant="secundair" data-autofocus onClick={sluit}>
+                Annuleren
+              </Knop>
+              <Knop
+                bezig={resetten.isPending}
+                onClick={() => {
+                  resetten.mutate(stap.rij);
+                }}
+              >
+                Resetten
+              </Knop>
+            </>
+          ) : stap?.soort === 'wachtwoord' ? (
+            <Knop onClick={sluit}>Ik heb het wachtwoord doorgegeven</Knop>
+          ) : null
+        }
+      >
+        {fout && stap?.soort !== 'wachtwoord' ? (
+          <Melding soort="fout">{fout.message}</Melding>
+        ) : null}
 
-      {rijen.isPending ? <p aria-busy="true">Bezig met laden…</p> : null}
-      {rijen.isError ? <p role="alert">De accounts konden niet worden geladen.</p> : null}
-      {rijen.data ? (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Medewerker</th>
-              <th scope="col">E-mail</th>
-              <th scope="col">Account</th>
-              <th scope="col">Rollen</th>
-              <th scope="col">Actie</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rijen.data.map((rij) => {
-              const eigen = rij.gebruikerId !== null && rij.gebruikerId === gebruiker?.id;
-              return (
-                <tr key={rij.medewerkerId}>
-                  <td>
-                    {rij.naam}
-                    {rij.actief ? '' : ' (niet actief)'}
-                  </td>
-                  <td>{rij.email}</td>
-                  <td>{rij.gebruikerId ? 'Ja' : 'Nee'}</td>
-                  <td>
-                    {rij.gebruikerId ? (
-                      rij.rollen.map((r) => ROLNAMEN[r]).join(', ') || '—'
-                    ) : (
-                      <fieldset className="rollen">
-                        <legend className="verborgen">Rollen voor {rij.naam}</legend>
-                        {ALLE_ROLLEN.filter((r) => r !== 'beheerder' || isBeheerder).map((r) => (
-                          <label key={r}>
-                            <input
-                              type="checkbox"
-                              disabled={!rij.actief}
-                              checked={(keuze[rij.medewerkerId] ?? []).includes(r)}
-                              onChange={() => {
-                                wisselRol(rij.medewerkerId, r);
-                              }}
-                            />
-                            {ROLNAMEN[r]}
-                          </label>
-                        ))}
-                      </fieldset>
-                    )}
-                  </td>
-                  <td>
-                    {rij.gebruikerId ? (
-                      <button
-                        type="button"
-                        className="secundair"
-                        disabled={eigen || resetten.isPending}
-                        title={eigen ? 'Je kunt je eigen account niet resetten.' : undefined}
-                        onClick={() => {
-                          void bevestig({
-                            titel: 'Account resetten?',
-                            tekst: `Het account van ${rij.naam} krijgt een nieuw tijdelijk wachtwoord. Alle gekoppelde toestellen worden verwijderd.`,
-                            bevestigTekst: 'Resetten',
-                          }).then((ja) => {
-                            if (ja) resetten.mutate(rij);
-                          });
-                        }}
-                      >
-                        Resetten
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={
-                          !rij.actief ||
-                          (keuze[rij.medewerkerId] ?? []).length === 0 ||
-                          aanmaken.isPending
-                        }
-                        onClick={() => {
-                          aanmaken.mutate(rij);
-                        }}
-                      >
-                        Account aanmaken
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : null}
+        {stap?.soort === 'aanmaken' ? (
+          <>
+            <p>
+              Er komt een account met het e-mailadres <strong>{stap.rij.email}</strong>. Daarna
+              krijg je een tijdelijk wachtwoord om persoonlijk door te geven.
+            </p>
+            <fieldset className="veldgroep">
+              <legend>Rollen</legend>
+              {kiesbareRollen.map((r, i) => (
+                <label key={r} className="veld-vinkje">
+                  <input
+                    type="checkbox"
+                    data-autofocus={i === 0 || undefined}
+                    checked={rollen.includes(r)}
+                    onChange={() => {
+                      setRollen((huidig) =>
+                        huidig.includes(r) ? huidig.filter((x) => x !== r) : [...huidig, r],
+                      );
+                    }}
+                  />
+                  {ROLNAMEN[r]}
+                </label>
+              ))}
+              {rollen.length === 0 ? (
+                <p id={rolfoutId} className="gedempt">
+                  Kies minstens één rol.
+                </p>
+              ) : null}
+            </fieldset>
+          </>
+        ) : null}
+
+        {stap?.soort === 'resetten' ? (
+          <p>
+            {stap.rij.naam} krijgt een nieuw tijdelijk wachtwoord en moet bij de volgende keer
+            inloggen een eigen wachtwoord kiezen en de authenticator-app opnieuw koppelen. Alle
+            gekoppelde toestellen worden verwijderd.
+          </p>
+        ) : null}
+
+        {stap?.soort === 'wachtwoord' ? (
+          <>
+            <Melding soort="let-op" titel="Wordt maar één keer getoond">
+              Geef dit wachtwoord persoonlijk door. Bij de eerste keer inloggen kiest{' '}
+              {stap.rij.naam} een eigen wachtwoord en koppelt een authenticator-app.
+            </Melding>
+            <Wachtwoord wachtwoord={stap.wachtwoord} />
+          </>
+        ) : null}
+      </Dialoog>
     </section>
   );
 }

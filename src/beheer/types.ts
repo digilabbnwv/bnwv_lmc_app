@@ -23,6 +23,8 @@ export interface Veld {
   /** Tonen afhankelijk van de huidige waarden. */
   zichtbaar?: (waarden: Formulierwaarden) => boolean;
   stap?: string;
+  /** Velden met dezelfde groep staan samen in een fieldset met deze legenda. */
+  groep?: string;
 }
 
 export interface Kolom<R> {
@@ -53,6 +55,11 @@ export interface BeheerDefinitie<R, U> {
   verwijder?: (rij: R) => Promise<void>;
   /** false = geen knop "toevoegen" (bijv. bij de gegevens van één medewerker). */
   kanToevoegen?: boolean;
+  /**
+   * Optionele live samenvatting onderaan het paneel (bijvoorbeeld de uren die een
+   * toewijzing oplevert). Geeft een element terug; dat mag zelf gegevens ophalen.
+   */
+  samenvatting?: (waarden: Formulierwaarden, bestaand: R | null) => ReactNode;
   /** Extra querykeys die na opslaan opnieuw geladen moeten worden. */
   ookVernieuwen?: readonly (readonly unknown[])[];
 }

@@ -14,6 +14,7 @@ import { Laden } from '../components/ui/Laden';
 import { Melding } from '../components/ui/Melding';
 import { useToast } from '../components/ui/Toasts';
 import { Indeling } from '../indeling/Indeling';
+import { Stappen } from '../components/ui/Stappen';
 import { Kerngetal, Kerngetallen } from '../components/ui/Kerngetal';
 import { MaandGrafiek } from '../weergaven/MaandGrafiek';
 import { ZoneLegenda } from '../weergaven/ZoneLegenda';
@@ -142,6 +143,7 @@ function Blokken() {
         <p className="kerngetal-waarde">1.104,0 uur</p>
         <p className="gedempt">Contracturen min vakanties en vaste taken.</p>
       </Kaart>
+      <Stappen stappen={['Bestand en periode', 'Controle', 'Verwerkt']} huidig={2} />
       <div className="galerij-rij">
         <Badge>lmc</Badge>
         <Badge>coördinator</Badge>
@@ -382,13 +384,24 @@ const schoolDefinitie: BeheerDefinitie<School, z.infer<typeof schoolSchema>> = {
     },
   ],
   velden: [
-    { naam: 'naam', label: 'Naam', type: 'tekst', verplicht: true },
-    { naam: 'plaats', label: 'Plaats', type: 'tekst', verplicht: true },
-    { naam: 'leerlingen', label: 'Aantal leerlingen', type: 'getal', verplicht: true },
+    { naam: 'naam', label: 'Naam', type: 'tekst', verplicht: true, groep: 'School' },
+    { naam: 'plaats', label: 'Plaats', type: 'tekst', verplicht: true, groep: 'School' },
+    {
+      naam: 'leerlingen',
+      label: 'Aantal leerlingen',
+      type: 'getal',
+      verplicht: true,
+      groep: 'Leerlingen',
+    },
   ],
   schema: schoolSchema,
   leeg: () => ({ naam: '', plaats: '', leerlingen: '' }),
   naarFormulier: (r) => ({ naam: r.naam, plaats: r.plaats, leerlingen: String(r.leerlingen) }),
+  samenvatting: (w) => (
+    <Melding titel="Wat levert dit op?">
+      <p>Voorbeeld: {String(w.leerlingen || '0')} leerlingen.</p>
+    </Melding>
+  ),
   // Galerij: er wordt niets opgeslagen.
   opslaan: () => Promise.resolve(),
   verwijder: () => Promise.resolve(),
