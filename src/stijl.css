@@ -3,6 +3,7 @@
 @import './stijl/lettertype.css';
 @import './stijl/indeling.css';
 @import './stijl/componenten.css';
+@import './stijl/overzichten.css';
 
 :root {
   font-family: var(--lettertype);

@@ -46,7 +46,7 @@ describe('doelbinding in de UI (SPEC §1)', () => {
 
   it('geen beoordelende woorden in teksten', () => {
     const verboden =
-      /achterstand|te weinig|onvoldoende|ondermaats|slecht gepresteerd|tekortschiet/i;
+      /achterstand|achterloop|achter op schema|te laat|te weinig|onvoldoende|ondermaats|slecht gepresteerd|tekortschiet/i;
     for (const f of bestanden(src)) expect(readFileSync(f, 'utf8'), f).not.toMatch(verboden);
   });
 

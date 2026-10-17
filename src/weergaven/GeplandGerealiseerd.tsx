@@ -7,6 +7,11 @@ import { useAuth } from '../auth/AuthContext';
 import { rechtenVoor } from '../auth/rechten';
 import { naamVan, useMedewerkers } from '../beheer/data';
 import { SchooljaarKiezer, useSchooljaarKeuze } from '../beheer/SchooljaarKiezer';
+import { Kaart, LegeStaat } from '../components/ui/Kaart';
+import { Kruimelpad } from '../components/ui/Kruimelpad';
+import { Laden } from '../components/ui/Laden';
+import { Melding } from '../components/ui/Melding';
+import { vertaalFout } from '../lib/fouten';
 import { formatUren } from '../lib/opmaak';
 import { haalVergelijking } from './data';
 import { nietGekoppeld, perCategorie, perWerkpakket, verschil, type Totaal } from './logica';
@@ -15,7 +20,7 @@ function Vergelijktabel({ titel, rijen, kop }: { titel: string; rijen: Totaal[];
   return (
     <div className="tabel-schuif">
       <table>
-        <caption>{titel}</caption>
+        <caption className="verborgen">{titel}</caption>
         <thead>
           <tr>
             <th scope="col" rowSpan={2}>
@@ -72,6 +77,30 @@ function Vergelijktabel({ titel, rijen, kop }: { titel: string; rijen: Totaal[];
   );
 }
 
+/**
+ * Eén categorie in cijfers. "Tot vandaag" bewust alleen als getallen, zonder balk: een
+ * balk nodigt uit tot een vergelijking die als oordeel gelezen wordt (doelbinding, SPEC §1).
+ */
+function CategorieKaart({ t }: { t: Totaal }) {
+  return (
+    <Kaart titel={t.naam}>
+      <dl>
+        <dt>Gepland</dt>
+        <dd>{formatUren(t.gepland)} uur</dd>
+        <dt>Gerealiseerd</dt>
+        <dd>{formatUren(t.gerealiseerd)} uur</dd>
+      </dl>
+      <p className="categoriekaart-tot">
+        Tot vandaag: {formatUren(t.gerealiseerdTot)} uur geboekt, {formatUren(t.geplandTot)} uur
+        gepland.
+        {t.sleutel === 'relatiebeheer' && t.gepland === 0 ? (
+          <span className="gedempt"> Relatiebeheer wordt niet vooraf gepland.</span>
+        ) : null}
+      </p>
+    </Kaart>
+  );
+}
+
 export function GeplandGerealiseerd() {
   const { medewerkerId: eigenId, rollen } = useAuth();
   const { medewerkerId: gekozen } = useParams();
@@ -89,17 +118,27 @@ export function GeplandGerealiseerd() {
   });
 
   const data = rijen.data ?? [];
+  const gevonden = (medewerkers.data ?? []).find((m) => m.id === medewerker);
+  const medewerkerNaam = gevonden ? naamVan(gevonden) : null;
   const los = nietGekoppeld(data);
 
   return (
     <section aria-labelledby="vergelijk-titel">
+      {gekozen && rechten.werkInzien ? (
+        <Kruimelpad
+          kruimels={[
+            { label: 'Teamoverzicht', pad: '/team' },
+            { label: medewerkerNaam ?? 'Medewerker' },
+          ]}
+        />
+      ) : null}
       <h2 id="vergelijk-titel">Gepland en gerealiseerd</h2>
       <p className="toelichting">
         Gepland komt uit de toewijzingen; gerealiseerd uit de definitieve MATT-imports. &quot;Tot
         vandaag&quot; vergelijkt het deel van de planning tot vandaag met wat tot vandaag is
         geboekt.
       </p>
-      <div className="filters">
+      <div className="overzicht-balk">
         <SchooljaarKiezer />
         {rechten.werkInzien ? (
           <label className="veld">
@@ -120,27 +159,46 @@ export function GeplandGerealiseerd() {
         ) : null}
       </div>
 
-      {rijen.isPending && schooljaar ? <p aria-busy="true">Bezig met laden…</p> : null}
+      {medewerker === null ? (
+        <Melding soort="let-op" titel="Geen medewerker gekoppeld">
+          Je account is niet aan een medewerker gekoppeld. Vraag een manager of beheerder om dat te
+          doen.
+        </Melding>
+      ) : null}
+      {rijen.isPending && schooljaar && medewerker ? <Laden /> : null}
+      {rijen.isError ? <Melding soort="fout">{vertaalFout(rijen.error)}</Melding> : null}
       {rijen.data ? (
         <>
-          <Vergelijktabel titel="Per categorie" kop="Categorie" rijen={perCategorie(data)} />
+          <h3>Per categorie</h3>
+          <div className="categoriekaarten">
+            {perCategorie(data).map((t) => (
+              <CategorieKaart key={t.sleutel} t={t} />
+            ))}
+          </div>
+          <details className="details-tabel">
+            <summary>Per categorie als tabel tonen</summary>
+            <Vergelijktabel titel="Per categorie" kop="Categorie" rijen={perCategorie(data)} />
+          </details>
+
+          <h3>Per werkpakket</h3>
           {perWerkpakket(data).length > 0 ? (
             <Vergelijktabel titel="Per werkpakket" kop="Werkpakket" rijen={perWerkpakket(data)} />
           ) : (
-            <p>Er zijn geen gekoppelde werkpakketten in dit schooljaar.</p>
+            <LegeStaat titel="Geen gekoppelde werkpakketten">
+              In dit schooljaar zijn er geen werkpakketten met geplande of geboekte uren.
+            </LegeStaat>
           )}
-          <h3>Niet gekoppeld</h3>
-          <p>
+
+          <Melding titel="Niet gekoppeld">
             Uren op MATT-projecten die nog niet aan een werkpakket zijn gekoppeld:{' '}
-            <strong>{formatUren(los.gerealiseerd)} uur</strong>
+            <strong>{formatUren(los.gerealiseerd)} uur</strong>.
             {los.gerealiseerd > 0 && rechten.mattProjecten ? (
               <>
                 {' '}
-                (<Link to="/beheer/matt-projecten">MATT-projecten koppelen</Link>)
+                <Link to="/beheer/matt-projecten">MATT-projecten koppelen</Link>
               </>
             ) : null}
-            .
-          </p>
+          </Melding>
         </>
       ) : null}
     </section>

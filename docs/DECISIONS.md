@@ -680,3 +680,30 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** boven de tabel staat een telling ("12 scholen", bij zoeken "3 van 12 scholen", via een live-regio). Bij een lege lijst verschijnt een lege staat met de knop Toevoegen; als zoeken niets oplevert, verschijnt "Geen resultaten voor …" met de knop "Zoekterm wissen". Lange tabellen scrollen binnen een eigen vak, waarin de kop blijft staan. Een rij opent alleen via de knop Bewerken of Bekijken, niet met een klik op de rij.
 **Reden:** keuze van de eigenaar (alleen via de knop): één duidelijke manier om te openen, en op een tablet open je niets per ongeluk tijdens het scrollen.
+
+## Interface — UI-3 Overzichten
+
+### 2026-10-17 · Kerngetallen met uitleg
+
+**Keuze:** Mijn belasting toont inzetbaar, gepland, gerealiseerd en resterende ruimte als kaarten (`Kerngetal`). Elk kerngetal heeft een uitklapbare uitleg "Hoe wordt dit berekend?" (`<details>`), in gewone taal en afgeleid van SPEC §5.
+**Reden:** "Inzetbaar" is een berekening in vier stappen. Met uitleg kun je de cijfers volgen en vertrouwen.
+
+### 2026-10-17 · Zonelegenda met grenzen uit de instellingen
+
+**Keuze:** `ZoneLegenda` toont _Ruimte_ (onder 85%), _Vol_ (85% tot en met 100%) en _Boven capaciteit_ (boven 100%), met de grenzen uit `instelling`. Die gelden op de begindatum van het schooljaar, net als `private.instelling_op` in de database. Elke zone heeft een woord, een balk en (bij boven capaciteit) een arcering. Er staat bij: "De zone helpt bij het verdelen van werk; het is geen oordeel."
+**Reden:** SPEC §5 en §1. De grenzen zijn instelbaar, dus ze staan niet vast in de code.
+
+### 2026-10-17 · Maandgrafiek als eigen SVG, met tabel
+
+**Keuze:** per maand een omlijnde staaf voor inzetbaar en een gevulde staaf voor gepland. Er is één y-as met ronde stappen (`asSchaal`), staven met een afgeronde bovenkant op de basislijn, en een tooltip per maand (SVG `<title>` op een raakvlak dat groter is dan de staven). Er komt geen grafiekbibliotheek bij. Er is een tekstalternatief (`<desc>`), en onder "Als tabel tonen" staat de volledige tabel. Alleen grijstinten. Boven capaciteit is gearceerd, zodat de vorm en niet de kleur de betekenis draagt.
+**Reden:** keuze van de eigenaar (grafiek plus tabel). CLAUDE.md vraagt minimale dependencies, en SPEC §1 vraagt neutrale kleuren. Omdat de grafiek bewust geen kleurpalet heeft, is er niets om op kleurenblindheid te controleren: inzetbaar en gepland verschillen in vorm (omlijnd tegenover gevuld).
+
+### 2026-10-17 · Teamoverzicht: zoeken, zonefilter, totaal en kaarten
+
+**Keuze:** je kunt zoeken op naam en filteren op zone, en een telling laat zien hoeveel van het totaal je ziet. De standaardsortering blijft _resterende ruimte, aflopend_ (SPEC §9). Een totaalrij telt de getoonde medewerkers op (contracturen, inzetbaar, gepland en ruimte), zonder totale belastingsgraad. Onder 48rem krijgt elke medewerker een kaart in plaats van een tabel. Tabel en kaarten worden allebei gerenderd, en de CSS toont er één (`display: none` haalt de andere ook uit de toegankelijkheidsboom).
+**Reden:** keuzes van de eigenaar (kaarten op een smal scherm, een teamtotaal). Een totaal per team helpt bij de capaciteitsplanning. Er komt bewust geen ranglijst.
+
+### 2026-10-17 · "Tot vandaag" alleen in cijfers
+
+**Keuze:** Gepland en gerealiseerd toont per categorie een kaart met gepland, gerealiseerd en de zin "Tot vandaag: X uur geboekt, Y uur gepland." Er komt geen balk en geen pijl. De tabel per categorie staat onder "Als tabel tonen"; de tabel per werkpakket blijft zichtbaar. "Niet gekoppeld" is een melding met de link naar MATT-projecten, alleen voor wie die mag beheren. Vanuit het teamoverzicht verschijnt een kruimelpad terug.
+**Reden:** keuze van de eigenaar. Een balk nodigt uit om te vergelijken op een manier die als oordeel gelezen wordt (doelbinding, SPEC §1; de OR moet nog instemmen). De doelbindingstest weigert nu ook _achterloop_, _achter op schema_ en _te laat_.
