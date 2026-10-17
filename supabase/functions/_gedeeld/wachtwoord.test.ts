@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertNotEquals } from '@std/assert';
-import { ALFABET, genereerWachtwoord, LENGTE } from './wachtwoord.ts';
+import { ALFABET, genereerWachtwoord, LENGTE, TEKENKLASSEN } from './wachtwoord.ts';
 
 Deno.test('genereerWachtwoord: lengte 20 en alleen tekens uit het alfabet', () => {
   for (let i = 0; i < 200; i++) {
@@ -15,6 +15,15 @@ Deno.test('genereerWachtwoord: geen verwarrende tekens', () => {
 
 Deno.test('genereerWachtwoord: minstens 100 bits entropie', () => {
   assert(LENGTE * Math.log2(ALFABET.length) >= 100);
+});
+
+Deno.test('genereerWachtwoord: altijd hoofdletter, kleine letter, cijfer en leesteken', () => {
+  for (let i = 0; i < 500; i++) {
+    const w = genereerWachtwoord();
+    for (const klasse of TEKENKLASSEN) {
+      assert([...w].some((t) => klasse.includes(t)), `${w} mist een teken uit ${klasse}`);
+    }
+  }
 });
 
 Deno.test('genereerWachtwoord: geeft steeds een ander wachtwoord', () => {
