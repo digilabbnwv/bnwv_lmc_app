@@ -577,3 +577,8 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** er is geen apart testproject. Het project **BNWV - LMC APP** (ref `hgpgrqkurnulenqcighy`, eu-west-1) is voorlopig de enige omgeving en bevat **uitsluitend fictieve gegevens**: de seed en de synthetische MATT-fixture. Er komen geen echte medewerkers en geen echte MATT-exports in, tot aan alle voorwaarden voor ingebruikname is voldaan: een betaald plan met back-ups, een verwerkersovereenkomst, akkoord van de FG en akkoord van de OR. Daarvóór wordt de database opgeschoond (zie SETUP.md §5).
 **Reden:** besloten door de eigenaar. Het gratis plan staat geen extra actief project toe. Het doel van SPEC §1 ("werk alleen lokaal of tegen het testproject") blijft zo gewaarborgd: zolang dit project alleen fictieve gegevens bevat, fungeert het als testomgeving.
+
+### 2026-10-17 · Zod zonder eval (`jitless`)
+
+**Keuze:** `src/lib/zodConfig.ts` zet `z.config({ jitless: true })` en wordt als eerste geïmporteerd in `main.tsx`.
+**Reden:** zod v4 test anders met `new Function` of eval is toegestaan. Onze CSP verbiedt dat (SPEC §2), dus de browser meldt een CSP-schending, ook al vangt zod de fout op. Gevonden tijdens de rondgang in Firefox. Validatie werkt hetzelfde, alleen zonder JIT-optimalisatie.
