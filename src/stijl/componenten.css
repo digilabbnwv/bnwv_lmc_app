@@ -483,3 +483,153 @@ select:disabled {
 label.veld-label {
   display: block;
 }
+
+/* Formulier in blokken (UI-4) */
+fieldset.veldgroep {
+  display: grid;
+  gap: var(--ruimte-4);
+  margin: 0;
+  padding: var(--ruimte-4);
+  border: 1px solid var(--rand);
+  border-radius: var(--rond);
+}
+
+fieldset.veldgroep legend {
+  padding: 0 var(--ruimte-2);
+  font-weight: 700;
+}
+
+.veldgroep-los {
+  display: grid;
+  gap: var(--ruimte-4);
+}
+
+.paneel-samenvatting {
+  margin-top: var(--ruimte-4);
+}
+
+/* Stappenindicator (UI-4) */
+.stappen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-2) var(--ruimte-5);
+  margin: 0 0 var(--ruimte-5);
+  padding: 0;
+  list-style: none;
+}
+
+.stap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ruimte-2);
+  color: var(--gedempt);
+}
+
+.stap-nummer {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--rand-sterk);
+  border-radius: 50%;
+  font-size: var(--tekst-klein);
+  font-weight: 700;
+}
+
+.stap-huidig {
+  color: var(--tekst);
+  font-weight: 700;
+}
+
+.stap-huidig .stap-nummer {
+  background: var(--knop-achtergrond);
+  border-color: var(--knop-achtergrond);
+  color: var(--knop-tekst);
+}
+
+.stap-klaar {
+  color: var(--tekst);
+}
+
+.stap-klaar .stap-nummer {
+  border-color: var(--tekst);
+}
+
+/* Uitklapblokken in de importcontrole */
+.blok {
+  margin: 0 0 var(--ruimte-3);
+  border: 1px solid var(--rand);
+  border-radius: var(--rond);
+  background: var(--oppervlak);
+}
+
+.blok > summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-2);
+  align-items: center;
+  padding: var(--ruimte-3) var(--ruimte-4);
+  min-height: var(--aanraak);
+  cursor: pointer;
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.blok > summary::marker {
+  content: '';
+}
+
+.blok > summary::before {
+  content: '▸';
+  color: var(--gedempt);
+}
+
+.blok[open] > summary::before {
+  content: '▾';
+}
+
+.blok-inhoud {
+  padding: 0 var(--ruimte-4) var(--ruimte-4);
+}
+
+.bestand-info {
+  margin: var(--ruimte-1) 0 0;
+  font-size: var(--tekst-klein);
+  color: var(--gedempt);
+}
+
+.periode-velden {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-3) var(--ruimte-4);
+  align-items: end;
+}
+
+form.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-2);
+  align-items: center;
+  max-width: none;
+}
+
+/* Accounts (UI-4) */
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-1);
+}
+
+.wachtwoord-vak {
+  margin: var(--ruimte-4) 0 var(--ruimte-2);
+  padding: var(--ruimte-3) var(--ruimte-4);
+  background: var(--oppervlak-zacht);
+  border: 1px dashed var(--rand-sterk);
+  border-radius: var(--rond);
+}
+
+.wachtwoord-vak .geheim {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}

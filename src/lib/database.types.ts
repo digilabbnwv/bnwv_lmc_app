@@ -1169,6 +1169,32 @@ export type Database = {
         Args: { p_datums: string[]; p_toewijzing_id: string }
         Returns: undefined
       }
+      toewijzing_voorbeeld: {
+        Args: {
+          p_aandeel_percentage: number
+          p_aantal_keer: number
+          p_bron: Database["public"]["Enums"]["uren_bron"]
+          p_datums: string[]
+          p_gepland_afronding: number
+          p_gepland_uitvoering: number
+          p_gepland_voorbereiding: number
+          p_looptijd_tot: string
+          p_looptijd_van: string
+          p_medewerker_id: string
+          p_schooljaar_id: string
+          p_toewijzing_id: string
+          p_verdeling: Database["public"]["Enums"]["verdeling"]
+          p_werkpakket_id: string
+        }
+        Returns: {
+          aantal_dagen: number
+          afronding: number
+          terugval: boolean
+          totaal: number
+          uitvoering: number
+          voorbereiding: number
+        }[]
+      }
     }
     Enums: {
       alias_bron: "matt" | "planning"

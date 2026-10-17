@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { MemoryRouter } from 'react-router';
 import { toegankelijkheidsfouten } from '../../test/axe';
 import { Kruimelpad } from './Kruimelpad';
+import { Stappen } from './Stappen';
 import { Tabbladen } from './Tabbladen';
 
 afterEach(cleanup);
@@ -64,6 +65,19 @@ describe('Kruimelpad', () => {
     const nav = screen.getByRole('navigation', { name: 'Kruimelpad' });
     expect(screen.getByRole('link', { name: 'Beheer' }).getAttribute('href')).toBe('/beheer');
     expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe('Scholen');
+    expect(await toegankelijkheidsfouten(container)).toEqual([]);
+  });
+});
+
+describe('Stappen', () => {
+  it('markeert de huidige stap en noemt afgeronde stappen', async () => {
+    const { container } = render(
+      <Stappen stappen={['Bestand', 'Controle', 'Verwerkt']} huidig={2} />,
+    );
+    const items = screen.getAllByRole('listitem');
+    expect(items[1]?.getAttribute('aria-current')).toBe('step');
+    expect(items[0]?.textContent).toContain('(klaar)');
+    expect(items[2]?.getAttribute('aria-current')).toBeNull();
     expect(await toegankelijkheidsfouten(container)).toEqual([]);
   });
 });

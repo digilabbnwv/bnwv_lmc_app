@@ -362,23 +362,49 @@ export function BeheerScherm<R, U>({ definitie, magBewerken }: Props<R, U>) {
             if (magBewerken) verstuur();
           }}
         >
-          {zichtbareVelden.map((veld, i) => (
-            <VeldInvoer
-              key={veld.naam}
-              veld={magBewerken ? veld : { ...veld, alleenLezen: true }}
-              waarden={waarden}
-              fout={fouten[veld.naam]}
-              nieuw={nieuw}
-              autofocus={i === 0}
-              onWijzig={(naam, w) => {
-                setWaarden((huidig) => ({ ...huidig, [naam]: w }));
-              }}
-            />
-          ))}
+          {groeperen(zichtbareVelden).map((blok, b) => {
+            const velden = blok.velden.map((veld) => (
+              <VeldInvoer
+                key={veld.naam}
+                veld={magBewerken ? veld : { ...veld, alleenLezen: true }}
+                waarden={waarden}
+                fout={fouten[veld.naam]}
+                nieuw={nieuw}
+                autofocus={veld === zichtbareVelden[0]}
+                onWijzig={(naam, w) => {
+                  setWaarden((huidig) => ({ ...huidig, [naam]: w }));
+                }}
+              />
+            ));
+            return blok.groep ? (
+              <fieldset key={blok.groep} className="veldgroep">
+                <legend>{blok.groep}</legend>
+                {velden}
+              </fieldset>
+            ) : (
+              <div key={`los-${String(b)}`} className="veldgroep-los">
+                {velden}
+              </div>
+            );
+          })}
         </form>
+        {d.samenvatting && keuze
+          ? d.samenvatting(waarden, keuze.soort === 'bestaand' ? keuze.rij : null)
+          : null}
       </Dialoog>
     </section>
   );
+}
+
+/** Opeenvolgende velden met dezelfde groep samen; velden zonder groep los. */
+export function groeperen(velden: Veld[]): { groep: string | undefined; velden: Veld[] }[] {
+  const blokken: { groep: string | undefined; velden: Veld[] }[] = [];
+  for (const veld of velden) {
+    const laatste = blokken[blokken.length - 1];
+    if (laatste && laatste.groep === veld.groep) laatste.velden.push(veld);
+    else blokken.push({ groep: veld.groep, velden: [veld] });
+  }
+  return blokken;
 }
 
 function capitaal(tekst: string): string {

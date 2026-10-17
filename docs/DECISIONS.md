@@ -707,3 +707,25 @@ Alle RPC's zijn SECURITY DEFINER met een rolcontrole (C/M/B op `aal2`) en draaie
 
 **Keuze:** Gepland en gerealiseerd toont per categorie een kaart met gepland, gerealiseerd en de zin "Tot vandaag: X uur geboekt, Y uur gepland." Er komt geen balk en geen pijl. De tabel per categorie staat onder "Als tabel tonen"; de tabel per werkpakket blijft zichtbaar. "Niet gekoppeld" is een melding met de link naar MATT-projecten, alleen voor wie die mag beheren. Vanuit het teamoverzicht verschijnt een kruimelpad terug.
 **Reden:** keuze van de eigenaar. Een balk nodigt uit om te vergelijken op een manier die als oordeel gelezen wordt (doelbinding, SPEC §1; de OR moet nog instemmen). De doelbindingstest weigert nu ook _achterloop_, _achter op schema_ en _te laat_.
+
+## Interface — UI-4 Stromen
+
+### 2026-10-17 · Rekenvoorbeeld bij een toewijzing uit de database
+
+**Keuze:** de nieuwe functie `public.toewijzing_voorbeeld` (migratie 013) legt de toewijzing vast in een subtransactie, leest de uren uit `toewijzing_uren` en het aantal dagen uit `toewijzing_dag`, en draait de subtransactie daarna altijd terug (eigen foutcode `VB001`). Er blijft niets achter, ook niet in het auditlog. De functie is SECURITY INVOKER: RLS, de checks en de triggers gelden net als bij opslaan, dus lmc, beheerder en aal1 worden geweigerd en een ongeldige combinatie geeft dezelfde fout. Bij een bestaande toewijzing rekent de functie met de gewijzigde waarden. Het paneel vraagt pas om een voorbeeld als het formulier geldig is en 400 ms niet is veranderd (`useVertraagd`). Bij een terugval (geen geschikte dagen) zegt het paneel dat de uren op de eerste dag komen.
+**Reden:** keuze van de eigenaar (uit de database). SPEC §5 wil de rekenregels op één plek; met deze opzet hoeven ze niet in TypeScript nagebouwd te worden. pgTAP-tests in `110_toewijzing_voorbeeld.test.sql`. `database.types.ts` is met de hand aangevuld in het formaat van `supabase gen types`; de e2e-job in CI controleert dat. Uitrol: `supabase db push` naar BNWV - LMC APP, na akkoord.
+
+### 2026-10-17 · Formulier in blokken
+
+**Keuze:** een veld kan een `groep` hebben. Opeenvolgende velden met dezelfde groep staan samen in een `<fieldset>` met legenda (`groeperen`). Toewijzingen krijgt de blokken _Wie en wat_, _Uren_ en _Verdeling_; de toelichting staat los. Een definitie kan een `samenvatting` meegeven die onder het formulier in het paneel staat.
+**Reden:** een formulier van 13 velden waarvan de helft verschijnt of verdwijnt, wordt zo te overzien (WCAG 1.3.1 en 3.3.2).
+
+### 2026-10-17 · MATT-import in drie stappen
+
+**Keuze:** de import heeft drie stappen: _1 Bestand en periode · 2 Controle · 3 Verwerkt_. De stappenindicator heeft `aria-current="step"` en bij elke stap staat een kop "Stap n van 3". Bij een stapwissel gaat de focus naar die kop. Stap 1 toont naam en grootte van het bestand en heeft de snelkeuzes "Vorige maand" en "Dit schooljaar t/m gisteren". Het formulier gebruikt `noValidate`, zodat onze eigen controle en melding verschijnen in plaats van de pop-up van de browser. Stap 2 begint met kerngetallen. Blokken die actie vragen (namen zonder alias, artikelcodes zonder categorie) staan open, met een Let-op-melding; zonder openstaande acties verschijnt "Alles is gekoppeld". Projecten zonder werkpakket zijn informatie, geen actie: die uren worden wel opgeslagen. In de historie krijgt de status een badge, en terugdraaien of verwerpen geeft een toast.
+**Reden:** keuze van de eigenaar (snelkeuzes). Je ziet waar je bent en wat er nog van je nodig is.
+
+### 2026-10-17 · Accounts: dialoog en wachtwoordstap
+
+**Keuze:** je kunt zoeken op naam of e-mail en filteren (_met account / zonder account / niet actief_), en elke medewerker heeft een status-badge. Aanmaken (rollen als fieldset, minstens één) en resetten (met uitleg, focus op Annuleren) gaan in één dialoog die doorloopt naar de wachtwoordstap. Het wachtwoord staat alleen in de state van de dialoog. Bij sluiten wordt het gewist, net als het resultaat in de mutation-cache van TanStack Query (`reset()`). Het komt nooit in een toast, URL, `localStorage` of console. Kopiëren meldt "Gekopieerd."; zonder toegang tot het klembord wordt de tekst geselecteerd, met uitleg. Sluiten met Escape of ✕ vraagt eerst of het mag. "Ik heb het wachtwoord doorgegeven" sluit direct. De dialoog krijgt een `stap`-sleutel, zodat de focus bij een nieuwe stap opnieuw naar het `data-autofocus`-element gaat.
+**Reden:** keuze van de eigenaar (eerst bevestigen). SPEC §7: het wachtwoord wordt één keer getoond. Zo gaat het niet per ongeluk verloren en blijft het nergens achter.
